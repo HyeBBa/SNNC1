@@ -38,15 +38,18 @@
     .clickable { cursor: pointer; }
     .clickable:hover { background-color: #f1f3f5; }
 
-    .has-data { font-weight: bold; color: #000; display: flex; flex-direction: column; align-items: center; line-height: 1.2;}
-    .req-data { color: #e74c3c; } 
+    .has-data { font-weight: bold; display: flex; flex-direction: column; align-items: center; line-height: 1.2;}
+    
+    /* 💡 휴무 신청 직원 이름 색상도 주간 색상과 동일한 초록색 계열로 변경 */
+    .req-data { color: #1e8449; } 
+    
     .sub-data { color: #27ae60; background-color: #e8f8f5; width: 100%; height: 100%; justify-content: center;}
     .reason-text { font-size: 10px; color: #888; font-weight: normal; } 
     
     .suggest-box { background-color: #e2e8f0; } 
     .suggest-guide { color: #0056b3; font-weight: bold; font-size: 12px; } 
 
-    /* 💡 근무 형태별 색상 설정 (주간: 가독성 좋은 초록색 계열로 변경) */
+    /* 근무 형태별 색상 설정 (주간, 신청 이름 모두 초록색 계열) */
     .s-day { color: #1e8449; font-weight: bold; }
     .s-night { color: #2980b9; font-weight: bold; }
     .s-off { color: #7f8c8d; }
