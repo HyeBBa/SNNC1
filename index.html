@@ -20,7 +20,6 @@
     
     .day-cell { border-right: 1px solid #ccc; border-bottom: 1px solid #ccc; display: flex; flex-direction: column; }
     
-    /* 날짜 헤더와 '대근' 타이틀 컬럼 레이아웃 */
     .day-header-bar { display: flex; background: #f1f3f5; border-bottom: 1px solid #ddd; font-size: 12px; font-weight: bold; text-align: center; }
     .day-date-part { width: calc(45px + 100% - 45px); flex: 2; padding: 4px; border-right: 1px solid #ddd; display: flex; align-items: center; justify-content: center; }
     .day-sub-title { flex: 1; padding: 4px; color: #0056b3; background: #e2e8f0; display: flex; align-items: center; justify-content: center; }
@@ -38,16 +37,18 @@
     .clickable { cursor: pointer; }
     .clickable:hover { background-color: #f1f3f5; }
 
-    .has-data { font-weight: bold; color: #000; display: flex; flex-direction: column; align-items: center; line-height: 1.2;}
-    .req-data { color: #e74c3c; } 
+    .has-data { font-weight: bold; display: flex; flex-direction: column; align-items: center; line-height: 1.2;}
+    
+    .req-data { color: #1e8449; } 
+    
     .sub-data { color: #27ae60; background-color: #e8f8f5; width: 100%; height: 100%; justify-content: center;}
     .reason-text { font-size: 10px; color: #888; font-weight: normal; } 
     
     .suggest-box { background-color: #e2e8f0; } 
     .suggest-guide { color: #0056b3; font-weight: bold; font-size: 12px; } 
 
-    .s-day { color: #d35400; }
-    .s-night { color: #2980b9; }
+    .s-day { color: #1e8449; font-weight: bold; }
+    .s-night { color: #2980b9; font-weight: bold; }
     .s-off { color: #7f8c8d; }
 
     #mainScreen { display: none; }
@@ -57,7 +58,7 @@
 
   <div id="loginScreen" class="card" style="max-width: 400px; margin: 50px auto; text-align: center;">
     <h2>🔒 교대근무 로그인</h2>
-    <input type="password" id="loginCode" placeholder="비밀번호 입력" maxlength="20" style="text-align: center; font-size: 20px; letter-spacing: 2px;">
+    <input type="password" id="loginCode" placeholder="비밀번호 입력" maxlength="50" style="text-align: center; font-size: 20px; letter-spacing: 2px;">
     <button onclick="login()">로그인</button>
   </div>
 
@@ -94,42 +95,8 @@
 
   <script>
     const SUPABASE_URL = 'https://lqqjyedfwlqinppcrvjf.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxcWp5ZWRmd2xxaW5wcGNydmpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3MzQ3NDgsImV4cCI6MjEwNjMxMDc0OH0.8N5fmaNOdNG1hKDTzAYYX6Pd9bc0AnJvBzGQpfsndFo';
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    const USER_DB = {
-      "1111": { name: "임병철", team: "A", role: "user" }, 
-      "1112": { name: "정성용", team: "A", role: "user" },
-      "1113": { name: "정준영", team: "A", role: "user" },
-      "1114": { name: "최민우", team: "A", role: "user" },
-      "1115": { name: "이현성", team: "A", role: "user" },
-      "1116": { name: "박형규", team: "A", role: "user" },
-      "1110": { name: "A조", team: "A", role: "team_admin" }, 
-      
-      "2111": { name: "백승학", team: "B", role: "user" }, 
-      "2112": { name: "이영식", team: "B", role: "user" },
-      "2113": { name: "강신혁", team: "B", role: "user" },
-      "gPflal0884@": { name: "장경준", team: "B", role: "admin" }, 
-      "2115": { name: "김영진", team: "B", role: "user" },
-      "2116": { name: "홍찬표", team: "B", role: "user" },
-      "2110": { name: "B조", team: "B", role: "team_admin" }, 
-      
-      "3111": { name: "김철종", team: "C", role: "user" }, 
-      "3112": { name: "조은래", team: "C", role: "user" },
-      "3113": { name: "황일선", team: "C", role: "user" }, 
-      "3114": { name: "하재오", team: "C", role: "user" },
-      "3115": { name: "임형빈", team: "C", role: "user" },
-      "3116": { name: "김정인", team: "C", role: "user" },
-      "3110": { name: "C조", team: "C", role: "team_admin" }, 
-
-      "4111": { name: "주영훈", team: "D", role: "user" }, 
-      "4112": { name: "홍동완", team: "D", role: "user" },
-      "4113": { name: "황호현", team: "D", role: "user" }, 
-      "4114": { name: "김종구", team: "D", role: "user" },
-      "4115": { name: "최정목", team: "D", role: "user" },
-      "4116": { name: "양석진", team: "D", role: "user" },
-      "4110": { name: "D조", team: "D", role: "team_admin" }, 
-    };
 
     const HOLIDAYS = {
       "2026-01-01": "신정", "2026-02-16": "설연휴", "2026-02-17": "설날", "2026-02-18": "설연휴",
@@ -154,7 +121,7 @@
     const TEAMS = ['A', 'B', 'C', 'D'];
 
     function isManager() {
-      return currentUser.role === 'admin' || currentUser.role === 'team_admin';
+      return currentUser && (currentUser.role === 'admin' || currentUser.role === 'team_admin');
     }
 
     function getShiftInfo(team, dateObj) {
@@ -202,22 +169,50 @@
       return 's-off';
     }
 
-    function login() {
+    async function login() {
       const code = document.getElementById('loginCode').value.trim();
-      if (USER_DB[code]) {
-        currentUser = USER_DB[code];
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('mainScreen').style.display = 'block';
-        
-        let roleBadge = '';
-        if (currentUser.role === 'admin') roleBadge = '👑(슈퍼관리자)';
-        if (currentUser.role === 'team_admin') roleBadge = '🛠️(조관리자)';
-        
-        document.getElementById('welcomeMsg').innerText = `[${currentUser.team}조] ${currentUser.name} 님 ${roleBadge}`;
-        loadData(); 
-      } else {
-        alert("코드가 일치하지 않습니다.");
+
+      if (!code) {
+        alert("코드를 입력하세요.");
+        return;
       }
+
+      const { data, error } = await supabaseClient
+        .from('app_users')
+        .select('name, team, role, is_active')
+        .eq('login_code', code)
+        .maybeSingle();
+
+      if (error) {
+        alert("로그인 조회 실패: " + error.message);
+        return;
+      }
+
+      if (!data) {
+        alert("코드가 일치하지 않습니다.");
+        return;
+      }
+
+      if (!data.is_active) {
+        alert("비활성화된 계정입니다.");
+        return;
+      }
+
+      currentUser = {
+        name: data.name,
+        team: data.team,
+        role: data.role
+      };
+
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('mainScreen').style.display = 'block';
+      
+      let roleBadge = '';
+      if (currentUser.role === 'admin') roleBadge = '👑(슈퍼관리자)';
+      if (currentUser.role === 'team_admin') roleBadge = '🛠️(조관리자)';
+      
+      document.getElementById('welcomeMsg').innerText = `[${currentUser.team}조] ${currentUser.name} 님 ${roleBadge}`;
+      loadData();
     }
 
     function logout() {
@@ -258,9 +253,11 @@
       const firstDay = new Date(currentYear, currentMonth, 1).getDay();
       const lastDate = new Date(currentYear, currentMonth + 1, 0).getDate();
 
-      for(let i=0; i<firstDay; i++) { grid.innerHTML += `<div></div>`; }
+      for(let i = 0; i < firstDay; i++) { 
+        grid.innerHTML += `<div></div>`; 
+      }
 
-      for(let d=1; d<=lastDate; d++) {
+      for(let d = 1; d <= lastDate; d++) {
         const dateObj = new Date(currentYear, currentMonth, d);
         const yyyy = currentYear;
         const mm = String(currentMonth + 1).padStart(2, '0');
@@ -287,9 +284,9 @@
 
         TEAMS.forEach(team => {
           const shift = getShiftInfo(team, dateObj);
-          const isMyTeam = (team === currentUser.team) ? 'my-team-row' : '';
+          const isMyTeam = (currentUser && team === currentUser.team) ? 'my-team-row' : '';
           const reqsForTeam = requestsData.filter(r => r.shift_date === dateStr && r.team === team);
-          const hasMyRequest = reqsForTeam.some(r => r.requested_by === currentUser.name);
+          const hasMyRequest = currentUser ? reqsForTeam.some(r => r.requested_by === currentUser.name) : false;
           
           let teamHtml = '';
           let suggestedTeam = '';
@@ -304,7 +301,7 @@
               
               let reqClick = '';
               let reqClass = 'cell-name';
-              if (req.requested_by === currentUser.name) {
+              if (currentUser && req.requested_by === currentUser.name) {
                 reqClick = `onclick="deleteRequest('${req.id}', '휴무 신청')"`;
                 reqClass += ' clickable';
               }
@@ -315,7 +312,7 @@
 
               if (req.filled_by) {
                 subName = `<div class="has-data sub-data"><span>${req.filled_by}</span></div>`;
-                subClick = (req.filled_by === currentUser.name || isManager()) 
+                subClick = (currentUser && (req.filled_by === currentUser.name || isManager())) 
                            ? `onclick="cancelSub('${req.id}')"` : '';
               } else {
                 if (suggestedTeam) {
@@ -338,7 +335,7 @@
           if (reqsForTeam.length === 0) {
             let reqClick = '';
             let reqClass = 'cell-name';
-            if (!isManager() && team === currentUser.team && shift !== '휴무') {
+            if (currentUser && !isManager() && team === currentUser.team && shift !== '휴무') {
               reqClick = `onclick="requestOff('${dateStr}', '${shift}')"`;
               reqClass += ' clickable';
             }
@@ -360,7 +357,7 @@
               </div>
             `;
           }
-          else if (team === currentUser.team && shift !== '휴무' && !hasMyRequest && !isManager()) {
+          else if (currentUser && team === currentUser.team && shift !== '휴무' && !hasMyRequest && !isManager()) {
             let reqClick = `onclick="requestOff('${dateStr}', '${shift}')"`;
             let reqClass = 'cell-name clickable';
             
@@ -401,8 +398,12 @@
       }
     }
 
-    // 💡 에러 확인용 alert 추가된 휴무 신청 함수
     async function requestOff(date, shift) {
+      if (!currentUser) {
+        alert("로그인 후 이용해 주세요.");
+        return;
+      }
+
       if (isManager()) {
         alert("🚫 조 관리자 코드로 휴무 신청을 할 수 없습니다.");
         return;
@@ -412,18 +413,22 @@
       if (reason === null) return; 
 
       const { error } = await supabaseClient.from('requests').insert([
-        { requested_by: currentUser.name, team: currentUser.team, shift_type: shift, shift_date: date, reason: reason }
+        { requested_by: currentUser.name, team: currentUser.team, shift_type: shift, shift_date: date, reason: reason, status: 'OPEN' }
       ]);
 
       if (error) {
         alert("❌ 휴무 신청 저장 실패: " + error.message);
-        console.error(error);
       } else {
         loadData();
       }
     }
 
     async function editMemo(date, currentMemo) {
+      if (!currentUser) {
+        alert("로그인 후 이용해 주세요.");
+        return;
+      }
+
       const newMemo = prompt(`[${date}] 일정/메모를 입력하세요.\n\n※ 내용을 모두 지우고 확인을 누르면 삭제됩니다.`, currentMemo);
       if (newMemo === null) return; 
       
@@ -446,6 +451,11 @@
     }
 
     async function acceptRequest(id, targetTeam, dateStr, shiftType) {
+      if (!currentUser) {
+        alert("로그인 후 이용해 주세요.");
+        return;
+      }
+
       let subName = currentUser.name;
       const targetDateObj = new Date(dateStr);
       
@@ -457,20 +467,24 @@
         if (!subName || !subName.trim()) return;
         subName = subName.trim();
         
-        let foundUser = null;
-        let subTeam = '';
-        for (let code in USER_DB) {
-          if (USER_DB[code].name === subName) {
-            foundUser = USER_DB[code];
-            subTeam = USER_DB[code].team;
-            break;
-          }
+        const { data: userRows, error: userError } = await supabaseClient
+          .from('app_users')
+          .select('name, team, role, is_active')
+          .eq('name', subName)
+          .eq('is_active', true);
+
+        if (userError) {
+          alert("사용자 조회 실패: " + userError.message);
+          return;
         }
 
-        if (!foundUser) {
+        if (!userRows || userRows.length === 0) {
           alert(`🚫 오류: "${subName}"은(는) 시스템에 등록되지 않은 사용자 이름입니다.`);
           return;
         }
+
+        const foundUser = userRows[0];
+        const subTeam = foundUser.team;
 
         if (subTeam === targetTeam) {
           alert(`🚫 오류: 같은 조(${targetTeam}조) 인원은 대근을 설 수 없습니다!`);
@@ -525,6 +539,11 @@
     }
 
     async function cancelSub(id) {
+      if (!currentUser) {
+        alert("로그인 후 이용해 주세요.");
+        return;
+      }
+
       if(!confirm("해당 대근 내역을 취소(삭제)하시겠습니까?")) return;
       const { error } = await supabaseClient.from('requests').update({ status: 'OPEN', filled_by: null }).eq('id', id);
       if (error) {
@@ -535,6 +554,11 @@
     }
 
     async function deleteRequest(id, type) {
+      if (!currentUser) {
+        alert("로그인 후 이용해 주세요.");
+        return;
+      }
+
       if(!confirm(`${type}을(를) 취소(삭제)하시겠습니까?`)) return;
       const { error } = await supabaseClient.from('requests').delete().eq('id', id);
       if (error) {
@@ -543,6 +567,12 @@
         loadData();
       }
     }
+
+    document.getElementById('loginCode').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        login();
+      }
+    });
   </script>
 </body>
 </html>
