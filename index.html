@@ -29,27 +29,31 @@
     
     .team-row { display: flex; min-height: 35px; border-bottom: 1px solid #eee; font-size: 12px; }
     .memo-row { border-top: 1px solid #ccc; background-color: #fff9c4; border-bottom: none; } 
-    .my-team-row { background-color: #e6f2ff; } 
+    
+    /* 💡 4개 조별 고유 배경 음영 색상 설정 (로그인한 본인 조는 조금 더 진하게 강조) */
+    .team-a-row { background-color: #f8f9fa; }
+    .team-b-row { background-color: #e8f4fd; }
+    .team-c-row { background-color: #eafaf1; }
+    .team-d-row { background-color: #fef9e7; }
+
+    .my-team-row { background-color: #d4edda !important; font-weight: bold; } 
     
     .cell-shift { width: 45px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; font-weight: bold; border-right: 1px solid #eee; }
     .cell-name { flex: 1; display: flex; justify-content: center; align-items: center; border-right: 1px solid #eee; color: #495057; position: relative; }
     .cell-name:last-child { border-right: none; }
     
     .clickable { cursor: pointer; }
-    .clickable:hover { background-color: #f1f3f5; }
+    .clickable:hover { background-color: rgba(0,0,0,0.05); }
 
     .has-data { font-weight: bold; display: flex; flex-direction: column; align-items: center; line-height: 1.2;}
-    
-    /* 💡 휴무 신청 직원 이름 색상도 주간 색상과 동일한 초록색 계열로 변경 */
     .req-data { color: #1e8449; } 
-    
-    .sub-data { color: #27ae60; background-color: #e8f8f5; width: 100%; height: 100%; justify-content: center;}
+    .sub-data { color: #27ae60; background-color: rgba(39, 174, 96, 0.1); width: 100%; height: 100%; justify-content: center;}
     .reason-text { font-size: 10px; color: #888; font-weight: normal; } 
     
-    .suggest-box { background-color: #e2e8f0; } 
+    .suggest-box { background-color: rgba(0, 86, 179, 0.1); } 
     .suggest-guide { color: #0056b3; font-weight: bold; font-size: 12px; } 
 
-    /* 근무 형태별 색상 설정 (주간, 신청 이름 모두 초록색 계열) */
+    /* 근무 형태별 색상 설정 */
     .s-day { color: #1e8449; font-weight: bold; }
     .s-night { color: #2980b9; font-weight: bold; }
     .s-off { color: #7f8c8d; }
@@ -291,7 +295,13 @@
 
         TEAMS.forEach(team => {
           const shift = getShiftInfo(team, dateObj);
-          const isMyTeam = (team === currentUser.team) ? 'my-team-row' : '';
+          
+          // 💡 조별 고유 배경색 클래스 적용 (본인 조일 경우 my-team-row가 우선 적용됨)
+          let teamBgClass = `team-${team.toLowerCase()}-row`;
+          if (team === currentUser.team) {
+            teamBgClass = 'my-team-row';
+          }
+
           const reqsForTeam = requestsData.filter(r => r.shift_date === dateStr && r.team === team);
           const hasMyRequest = reqsForTeam.some(r => r.requested_by === currentUser.name);
           
@@ -330,7 +340,7 @@
               }
 
               teamHtml += `
-                <div class="team-row ${isMyTeam}">
+                <div class="team-row ${teamBgClass}">
                   <div class="cell-shift ${getShiftClass(shift)}">${team}${getShortShift(shift)}</div>
                   <div class="${reqClass}" ${reqClick} title="${reqClick ? '클릭 시 삭제' : ''}">${reqName}</div>
                   <div class="${subCellClass}" ${subClick} title="클릭 시 대근 등록/취소">${subName}</div>
@@ -357,7 +367,7 @@
             }
 
             teamHtml += `
-              <div class="team-row ${isMyTeam}">
+              <div class="team-row ${teamBgClass}">
                 <div class="cell-shift ${getShiftClass(shift)}">${team}${getShortShift(shift)}</div>
                 <div class="${reqClass}" ${reqClick} title="${reqClick ? '클릭 시 휴무 신청' : ''}"></div>
                 <div class="${subCellClass}" ${subClick} title="휴무 신청이 없을 때는 대근 등록 불가">${suggestGuideHtml}</div>
@@ -378,7 +388,7 @@
             }
 
             teamHtml += `
-              <div class="team-row ${isMyTeam}">
+              <div class="team-row ${teamBgClass}">
                 <div class="cell-shift ${getShiftClass(shift)}">${team}${getShortShift(shift)}</div>
                 <div class="${reqClass}" ${reqClick} title="클릭 시 휴무 신청"></div>
                 <div class="${subCellClass}" ${subClick} title="휴무 신청이 없을 때는 대근 등록 불가">${suggestGuideHtml}</div>
