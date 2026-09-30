@@ -20,7 +20,7 @@
     
     .day-cell { border-right: 1px solid #ccc; border-bottom: 1px solid #ccc; display: flex; flex-direction: column; }
     
-    /* 💡 날짜와 대근 칸의 너비 비율을 아래쪽 팀 행과 정확히 일치시킴 (좌우 비율 조절) */
+    /* 날짜 헤더와 '대근' 타이틀 컬럼 레이아웃 */
     .day-header-bar { display: flex; background: #f1f3f5; border-bottom: 1px solid #ddd; font-size: 12px; font-weight: bold; text-align: center; }
     .day-date-part { width: calc(45px + 100% - 45px); flex: 2; padding: 4px; border-right: 1px solid #ddd; display: flex; align-items: center; justify-content: center; }
     .day-sub-title { flex: 1; padding: 4px; color: #0056b3; background: #e2e8f0; display: flex; align-items: center; justify-content: center; }
@@ -78,7 +78,7 @@
       
       <p style="font-size: 12px; color: #555; margin-bottom: 10px; line-height: 1.4;">
         💡 <strong>휴무 신청:</strong> 본인 계정으로만 가능 (조 관리자는 휴무 신청 불가)<br>
-        💡 <strong>대근 신청:</strong> 우측 '대근' 칸을 눌러 대근자 지정 가능 (지정 조 또는 당일 비번조만 가능)
+        💡 <strong>대근 신청:</strong> 휴무 신청이 있는 칸에 한해 우측 '대근' 칸을 눌러 등록 가능
       </p>
 
       <div class="cal-wrapper">
@@ -341,10 +341,11 @@
                 reqClass += ' clickable';
               }
               
-              let suggestGuideHtml = '';
+              // 💡 휴무 칸이 비어있을 때는 대근 칸을 눌러도 입력되지 않도록 수정 (경고 팝업 출력)
               let subCellClass = 'cell-name clickable';
+              let subClick = `onclick="alert('🚫 해당 날짜/조에 휴무 신청(공석)이 없어 대근을 등록할 수 없습니다.');"`;
+
               if (shift !== '휴무' && suggestedTeam) {
-                suggestGuideHtml = `<span class="suggest-guide">${suggestedTeam}</span>`;
                 subCellClass += ' suggest-box'; 
               }
 
@@ -352,7 +353,7 @@
                 <div class="team-row ${isMyTeam}">
                   <div class="cell-shift ${getShiftClass(shift)}">${team}${getShortShift(shift)}</div>
                   <div class="${reqClass}" ${reqClick} title="${reqClick ? '클릭 시 휴무 신청' : ''}"></div>
-                  <div class="${subCellClass}" onclick="acceptRequest('new_${team}_${dateStr}', '${team}', '${dateStr}', '${shift}')" title="클릭 시 대근 등록">${suggestGuideHtml}</div>
+                  <div class="${subCellClass}" ${subClick} title="휴무 신청이 없을 때는 대근 등록 불가"></div>
                 </div>
               `;
             }
