@@ -11,39 +11,40 @@
     input { width: 100%; padding: 12px; margin: 8px 0 15px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
     button { width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 15px; }
     .btn-small { width: auto; padding: 6px 12px; font-size: 13px; margin: 0; }
-
+    
     .cal-wrapper { overflow-x: auto; padding-bottom: 10px; }
     .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); min-width: 950px; border-top: 2px solid #555; border-left: 1px solid #ccc; background: #fff; }
-
+    
     .cal-header-row { display: grid; grid-template-columns: repeat(7, 1fr); min-width: 950px; text-align: center; font-weight: bold; background: #f8f9fa; border-left: 1px solid #ccc; }
     .cal-header-cell { padding: 8px 0; border-right: 1px solid #ccc; border-bottom: 1px solid #ccc; font-size: 14px; }
-
+    
     .day-cell { border-right: 1px solid #ccc; border-bottom: 1px solid #ccc; display: flex; flex-direction: column; }
-
+    
+    /* 날짜 헤더와 '대근' 타이틀 컬럼 레이아웃 */
     .day-header-bar { display: flex; background: #f1f3f5; border-bottom: 1px solid #ddd; font-size: 12px; font-weight: bold; text-align: center; }
     .day-date-part { width: calc(45px + 100% - 45px); flex: 2; padding: 4px; border-right: 1px solid #ddd; display: flex; align-items: center; justify-content: center; }
     .day-sub-title { flex: 1; padding: 4px; color: #0056b3; background: #e2e8f0; display: flex; align-items: center; justify-content: center; }
 
-    .holiday-name { font-size: 11px; font-weight: normal; margin-left: 3px; letter-spacing: -0.5px; }
-
+    .holiday-name { font-size: 11px; font-weight: normal; margin-left: 3px; letter-spacing: -0.5px;} 
+    
     .team-row { display: flex; min-height: 35px; border-bottom: 1px solid #eee; font-size: 12px; }
-    .memo-row { border-top: 1px solid #ccc; background-color: #fff9c4; border-bottom: none; }
-    .my-team-row { background-color: #e6f2ff; }
-
+    .memo-row { border-top: 1px solid #ccc; background-color: #fff9c4; border-bottom: none; } 
+    .my-team-row { background-color: #e6f2ff; } 
+    
     .cell-shift { width: 45px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; font-weight: bold; border-right: 1px solid #eee; }
     .cell-name { flex: 1; display: flex; justify-content: center; align-items: center; border-right: 1px solid #eee; color: #495057; position: relative; }
     .cell-name:last-child { border-right: none; }
-
+    
     .clickable { cursor: pointer; }
     .clickable:hover { background-color: #f1f3f5; }
 
-    .has-data { font-weight: bold; color: #000; display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
-    .req-data { color: #e74c3c; }
-    .sub-data { color: #27ae60; background-color: #e8f8f5; width: 100%; height: 100%; justify-content: center; }
-    .reason-text { font-size: 10px; color: #888; font-weight: normal; }
-
-    .suggest-box { background-color: #e2e8f0; }
-    .suggest-guide { color: #0056b3; font-weight: bold; font-size: 12px; }
+    .has-data { font-weight: bold; color: #000; display: flex; flex-direction: column; align-items: center; line-height: 1.2;}
+    .req-data { color: #e74c3c; } 
+    .sub-data { color: #27ae60; background-color: #e8f8f5; width: 100%; height: 100%; justify-content: center;}
+    .reason-text { font-size: 10px; color: #888; font-weight: normal; } 
+    
+    .suggest-box { background-color: #e2e8f0; } 
+    .suggest-guide { color: #0056b3; font-weight: bold; font-size: 12px; } 
 
     .s-day { color: #d35400; }
     .s-night { color: #2980b9; }
@@ -55,7 +56,7 @@
 <body>
 
   <div id="loginScreen" class="card" style="max-width: 400px; margin: 50px auto; text-align: center;">
-    <h2>교대근무 로그인</h2>
+    <h2>🔒 교대근무 로그인</h2>
     <input type="password" id="loginCode" placeholder="비밀번호 입력" maxlength="20" style="text-align: center; font-size: 20px; letter-spacing: 2px;">
     <button onclick="login()">로그인</button>
   </div>
@@ -64,10 +65,7 @@
     <div class="card" style="margin-bottom: 10px; padding: 10px 15px;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <h2 id="welcomeMsg" style="margin: 0; font-size: 16px;">환영합니다!</h2>
-        <div>
-          <button onclick="openChangeCodeModal()" class="btn-small" style="background-color: #28a745; margin-right: 5px;">코드변경</button>
-          <button onclick="logout()" class="btn-small" style="background-color: #6c757d;">로그아웃</button>
-        </div>
+        <button onclick="logout()" class="btn-small" style="background-color: #6c757d;">로그아웃</button>
       </div>
     </div>
 
@@ -77,20 +75,16 @@
         <h3 id="currentMonthStr" style="margin: 0; font-size: 18px;">2026년 9월</h3>
         <button onclick="changeMonth(1)" class="btn-small" style="background-color: #e9ecef; color: black;">다음달 ▶</button>
       </div>
-
+      
       <p style="font-size: 12px; color: #555; margin-bottom: 10px; line-height: 1.4;">
-        휴무 신청: 본인 계정으로만 가능 (조 관리자는 휴무 신청 불가)<br>
-        대근 신청: 휴무 신청이 있는 칸에 한해 우측 '대근' 칸을 눌러 등록 가능
+        💡 <strong>휴무 신청:</strong> 본인 계정으로만 가능 (조 관리자는 휴무 신청 불가)<br>
+        💡 <strong>대근 신청:</strong> 휴무 신청이 있는 칸에 한해 우측 '대근' 칸을 눌러 등록 가능
       </p>
 
       <div class="cal-wrapper">
         <div class="cal-header-row">
           <div class="cal-header-cell" style="color: red;">일</div>
-          <div class="cal-header-cell">월</div>
-          <div class="cal-header-cell">화</div>
-          <div class="cal-header-cell">수</div>
-          <div class="cal-header-cell">목</div>
-          <div class="cal-header-cell">금</div>
+          <div class="cal-header-cell">월</div><div class="cal-header-cell">화</div><div class="cal-header-cell">수</div><div class="cal-header-cell">목</div><div class="cal-header-cell">금</div>
           <div class="cal-header-cell" style="color: blue;">토</div>
         </div>
         <div id="calendarGrid" class="cal-grid"></div>
@@ -99,16 +93,44 @@
   </div>
 
   <script>
-    // =====================================================================
-    // Supabase 설정
-    // =====================================================================
     const SUPABASE_URL = 'https://lqqjyedfwlqinppcrvjf.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxcWp5ZWRmd2xxaW5wcGNydmpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3MzQ3NDgsImV4cCI6MjEwNjMxMDc0OH0.8N5fmaNOdNG1hKDTzAYYX6Pd9bc0AnJvBzGQpfsndFo';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // =====================================================================
-    // 공휴일 데이터
-    // =====================================================================
+    const USER_DB = {
+      "1111": { name: "임병철", team: "A", role: "user" }, 
+      "1112": { name: "정성용", team: "A", role: "user" },
+      "1113": { name: "정준영", team: "A", role: "user" },
+      "1114": { name: "최민우", team: "A", role: "user" },
+      "1115": { name: "이현성", team: "A", role: "user" },
+      "1116": { name: "박형규", team: "A", role: "user" },
+      "1110": { name: "A조", team: "A", role: "team_admin" }, 
+      
+      "2111": { name: "백승학", team: "B", role: "user" }, 
+      "2112": { name: "이영식", team: "B", role: "user" },
+      "2113": { name: "강신혁", team: "B", role: "user" },
+      "gPflal0884@": { name: "장경준", team: "B", role: "admin" }, 
+      "2115": { name: "김영진", team: "B", role: "user" },
+      "2116": { name: "홍찬표", team: "B", role: "user" },
+      "2110": { name: "B조", team: "B", role: "team_admin" }, 
+      
+      "3111": { name: "김철종", team: "C", role: "user" }, 
+      "3112": { name: "조은래", team: "C", role: "user" },
+      "3113": { name: "황일선", team: "C", role: "user" }, 
+      "3114": { name: "하재오", team: "C", role: "user" },
+      "3115": { name: "임형빈", team: "C", role: "user" },
+      "3116": { name: "김정인", team: "C", role: "user" },
+      "3110": { name: "C조", team: "C", role: "team_admin" }, 
+
+      "4111": { name: "주영훈", team: "D", role: "user" }, 
+      "4112": { name: "홍동완", team: "D", role: "user" },
+      "4113": { name: "황호현", team: "D", role: "user" }, 
+      "4114": { name: "김종구", team: "D", role: "user" },
+      "4115": { name: "최정목", team: "D", role: "user" },
+      "4116": { name: "양석진", team: "D", role: "user" },
+      "4110": { name: "D조", team: "D", role: "team_admin" }, 
+    };
+
     const HOLIDAYS = {
       "2026-01-01": "신정", "2026-02-16": "설연휴", "2026-02-17": "설날", "2026-02-18": "설연휴",
       "2026-03-01": "3·1절", "2026-05-05": "어린이날", "2026-05-24": "부처님오신날", "2026-06-06": "현충일",
@@ -120,36 +142,17 @@
       "2027-10-03": "개천절", "2027-10-09": "한글날", "2027-12-25": "성탄절"
     };
 
-    // =====================================================================
-    // 전역 상태
-    // =====================================================================
     let currentUser = null;
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().getMonth();
     let requestsData = [];
-    let memosData = [];
+    let memosData = []; 
 
     const PATTERN = ['주간', '주간', '휴무', '휴무', '야간', '야간', '휴무', '휴무'];
     const TEAM_OFFSET = { 'A': 0, 'C': 2, 'D': 4, 'B': 6 };
-    const BASE_DATE = new Date('2026-09-30T00:00:00');
+    const BASE_DATE = new Date('2026-09-30T00:00:00'); 
     const TEAMS = ['A', 'B', 'C', 'D'];
 
-    // =====================================================================
-    // [버그3 수정] XSS 방어용 HTML 이스케이프 함수
-    // =====================================================================
-    function escapeHtml(str) {
-      if (!str) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-
-    // =====================================================================
-    // 유틸 함수
-    // =====================================================================
     function isManager() {
       return currentUser.role === 'admin' || currentUser.role === 'team_admin';
     }
@@ -159,7 +162,7 @@
       const baseDate = new Date(BASE_DATE.getFullYear(), BASE_DATE.getMonth(), BASE_DATE.getDate());
       const diffTime = targetDate - baseDate;
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
+      
       let index = (diffDays + TEAM_OFFSET[team]) % 8;
       if (index < 0) index += 8;
       return PATTERN[index];
@@ -176,6 +179,7 @@
         if (t !== targetTeam) {
           const pShift = getShiftInfo(t, prevDate);
           const nShift = getShiftInfo(t, nextDate);
+
           if (shiftType === '주간') {
             if (pShift === '주간' || nShift === '주간') helperTeam = t + '조';
           } else if (shiftType === '야간') {
@@ -198,37 +202,22 @@
       return 's-off';
     }
 
-    // =====================================================================
-    // 로그인 / 로그아웃
-    // =====================================================================
-    async function login() {
+    function login() {
       const code = document.getElementById('loginCode').value.trim();
-      if (!code) {
-        alert("코드를 입력해주세요.");
-        return;
-      }
-
-      const { data, error } = await supabaseClient
-        .from('users')
-        .select('*')
-        .eq('code', code);
-
-      if (error || !data || data.length === 0) {
+      if (USER_DB[code]) {
+        currentUser = USER_DB[code];
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainScreen').style.display = 'block';
+        
+        let roleBadge = '';
+        if (currentUser.role === 'admin') roleBadge = '👑(슈퍼관리자)';
+        if (currentUser.role === 'team_admin') roleBadge = '🛠️(조관리자)';
+        
+        document.getElementById('welcomeMsg').innerText = `[${currentUser.team}조] ${currentUser.name} 님 ${roleBadge}`;
+        loadData(); 
+      } else {
         alert("코드가 일치하지 않습니다.");
-        return;
       }
-
-      currentUser = data[0];
-      document.getElementById('loginScreen').style.display = 'none';
-      document.getElementById('mainScreen').style.display = 'block';
-
-      let roleBadge = '';
-      if (currentUser.role === 'admin') roleBadge = '(슈퍼관리자)';
-      if (currentUser.role === 'team_admin') roleBadge = '(조관리자)';
-
-      document.getElementById('welcomeMsg').innerText =
-        `[${currentUser.team}조] ${currentUser.name} 님 ${roleBadge}`;
-      loadData();
     }
 
     function logout() {
@@ -238,59 +227,11 @@
       document.getElementById('loginScreen').style.display = 'block';
     }
 
-    // =====================================================================
-    // [버그5 수정] 코드 변경 시 현재 코드 재확인 로직 추가
-    // =====================================================================
-    async function openChangeCodeModal() {
-      const confirmCode = prompt(`[${currentUser.name} 님] 코드 변경을 위해 현재 코드를 먼저 입력하세요.`);
-      if (confirmCode === null) return;
-
-      if (confirmCode.trim() !== currentUser.code) {
-        alert("현재 코드가 일치하지 않습니다. 코드 변경이 취소되었습니다.");
-        return;
-      }
-
-      const newCode = prompt(`새로운 개인 코드를 입력하세요.\n(2자리 이상 숫자 또는 문자)`);
-      if (newCode === null) return;
-
-      const trimmedCode = newCode.trim();
-      if (trimmedCode.length < 2) {
-        alert("코드는 최소 2자리 이상이어야 합니다.");
-        return;
-      }
-
-      const { data: existingUser } = await supabaseClient
-        .from('users')
-        .select('*')
-        .eq('code', trimmedCode);
-
-      if (existingUser && existingUser.length > 0) {
-        alert("이미 다른 사람이 사용 중인 코드입니다. 다른 코드를 입력해주세요.");
-        return;
-      }
-
-      const { error: updateError } = await supabaseClient
-        .from('users')
-        .update({ code: trimmedCode })
-        .eq('name', currentUser.name);
-
-      if (updateError) {
-        alert("코드 변경에 실패했습니다. 다시 시도해 주세요.");
-        return;
-      }
-
-      alert("개인 코드가 성공적으로 변경되었습니다!\n변경된 코드로 다시 로그인해 주세요.");
-      logout();
-    }
-
-    // =====================================================================
-    // 월 이동 및 데이터 로드
-    // =====================================================================
     function changeMonth(delta) {
       currentMonth += delta;
       if (currentMonth < 0) { currentMonth = 11; currentYear--; }
       if (currentMonth > 11) { currentMonth = 0; currentYear++; }
-      loadData();
+      loadData(); 
     }
 
     async function loadData() {
@@ -299,19 +240,13 @@
         supabaseClient.from('daily_memos').select('*')
       ]);
 
-      if (reqRes.error || memoRes.error) {
-        alert("데이터를 불러오지 못했습니다.");
-        return;
-      }
-
+      if (reqRes.error || memoRes.error) { alert("데이터를 불러오지 못했습니다."); return; }
+      
       requestsData = reqRes.data || [];
       memosData = memoRes.data || [];
       renderCalendar();
     }
 
-    // =====================================================================
-    // [버그1 수정] 렌더링 누락 버그 수정 — 조건문 중복 로직 제거
-    // =====================================================================
     function renderCalendar() {
       document.getElementById('currentMonthStr').innerText = `${currentYear}년 ${currentMonth + 1}월`;
       const grid = document.getElementById('calendarGrid');
@@ -320,28 +255,26 @@
       const firstDay = new Date(currentYear, currentMonth, 1).getDay();
       const lastDate = new Date(currentYear, currentMonth + 1, 0).getDate();
 
-      for (let i = 0; i < firstDay; i++) { grid.innerHTML += `<div></div>`; }
+      for(let i=0; i<firstDay; i++) { grid.innerHTML += `<div></div>`; }
 
-      for (let d = 1; d <= lastDate; d++) {
+      for(let d=1; d<=lastDate; d++) {
         const dateObj = new Date(currentYear, currentMonth, d);
         const yyyy = currentYear;
         const mm = String(currentMonth + 1).padStart(2, '0');
         const dd = String(d).padStart(2, '0');
-        const dateStr = `${yyyy}-${mm}-${dd}`;
-        const dayOfWeek = dateObj.getDay();
+        const dateStr = `${yyyy}-${mm}-${dd}`; 
+        const dayOfWeek = dateObj.getDay(); 
 
         const holidayName = HOLIDAYS[dateStr];
         let dateColorStyle = '';
         if (dayOfWeek === 0 || holidayName) {
-          dateColorStyle = 'color: #e74c3c;';
+          dateColorStyle = 'color: #e74c3c;'; 
         } else if (dayOfWeek === 6) {
-          dateColorStyle = 'color: #007bff;';
+          dateColorStyle = 'color: #007bff;'; 
         }
 
-        let holidayHtml = holidayName
-          ? `<span class="holiday-name">(${escapeHtml(holidayName)})</span>`
-          : '';
-
+        let holidayHtml = holidayName ? `<span class="holiday-name">(${holidayName})</span>` : '';
+        
         let dayHtml = `
           <div class="day-cell">
             <div class="day-header-bar">
@@ -353,41 +286,38 @@
           const shift = getShiftInfo(team, dateObj);
           const isMyTeam = (team === currentUser.team) ? 'my-team-row' : '';
           const reqsForTeam = requestsData.filter(r => r.shift_date === dateStr && r.team === team);
-
+          const hasMyRequest = reqsForTeam.some(r => r.requested_by === currentUser.name);
+          
+          let teamHtml = '';
           let suggestedTeam = '';
           if (shift !== '휴무') {
             suggestedTeam = getSuggestedHelperTeam(team, shift, dateObj);
           }
 
-          let teamHtml = '';
-
+          // 1. 해당 조에 등록된 휴무 신청 내역이 있으면 모두 렌더링
           if (reqsForTeam.length > 0) {
-            // 휴무 신청이 있는 경우
             reqsForTeam.forEach(req => {
-              const safeReqName = escapeHtml(req.requested_by);
-              const safeReason = escapeHtml(req.reason);
-              let reasonHtml = safeReason ? `<span class="reason-text">(${safeReason})</span>` : '';
-              let reqName = `<div class="has-data req-data"><span>${safeReqName}</span>${reasonHtml}</div>`;
-
+              let reasonHtml = req.reason ? `<span class="reason-text">(${req.reason})</span>` : '';
+              let reqName = `<div class="has-data req-data"><span>${req.requested_by}</span>${reasonHtml}</div>`;
+              
               let reqClick = '';
               let reqClass = 'cell-name';
               if (req.requested_by === currentUser.name) {
                 reqClick = `onclick="deleteRequest('${req.id}', '휴무 신청')"`;
                 reqClass += ' clickable';
               }
-
+              
               let subName = '';
               let subClick = '';
               let subCellClass = 'cell-name clickable';
 
               if (req.filled_by) {
-                const safeFilledBy = escapeHtml(req.filled_by);
-                subName = `<div class="has-data sub-data"><span>${safeFilledBy}</span></div>`;
-                subClick = (req.filled_by === currentUser.name || isManager())
-                  ? `onclick="cancelSub('${req.id}')"` : '';
+                subName = `<div class="has-data sub-data"><span>${req.filled_by}</span></div>`;
+                subClick = (req.filled_by === currentUser.name || isManager()) 
+                           ? `onclick="cancelSub('${req.id}')"` : '';
               } else {
                 if (suggestedTeam) {
-                  subName = `<span class="suggest-guide">${escapeHtml(suggestedTeam)}</span>`;
+                  subName = `<span class="suggest-guide">${suggestedTeam}</span>`;
                   subCellClass += ' suggest-box';
                 }
                 subClick = `onclick="acceptRequest('${req.id}', '${team}', '${dateStr}', '${shift}')"`;
@@ -401,40 +331,53 @@
                 </div>
               `;
             });
-
-            // [버그1 핵심 수정] 다른 팀원 신청이 있어도 본인 휴무 신청 행 별도 렌더링
-            const hasMyRequest = reqsForTeam.some(r => r.requested_by === currentUser.name);
-            if (team === currentUser.team && shift !== '휴무' && !hasMyRequest && !isManager()) {
-              teamHtml += `
-                <div class="team-row ${isMyTeam}">
-                  <div class="cell-shift ${getShiftClass(shift)}">${team}${getShortShift(shift)}</div>
-                  <div class="cell-name clickable" onclick="requestOff('${dateStr}', '${shift}')" title="클릭 시 휴무 신청"></div>
-                  <div class="cell-name clickable" onclick="alert('해당 날짜/조에 휴무 신청(공석)이 없어 대근을 등록할 수 없습니다.');" title="휴무 신청이 없을 때는 대근 등록 불가"></div>
-                </div>
-              `;
-            }
-
-          } else {
-            // 휴무 신청이 없는 경우 — 빈 행 렌더링
+          } 
+          
+          // 2. 해당 조에 신청 내역이 아예 없는 경우 -> 빈 행 렌더링
+          if (reqsForTeam.length === 0) {
             let reqClick = '';
             let reqClass = 'cell-name';
             if (!isManager() && team === currentUser.team && shift !== '휴무') {
               reqClick = `onclick="requestOff('${dateStr}', '${shift}')"`;
               reqClass += ' clickable';
             }
-
+            
             let subCellClass = 'cell-name clickable';
-            let subClick = `onclick="alert('해당 날짜/조에 휴무 신청(공석)이 없어 대근을 등록할 수 없습니다.');"`;
+            let subClick = `onclick="alert('🚫 해당 날짜/조에 휴무 신청(공석)이 없어 대근을 등록할 수 없습니다.');"`;
+            let suggestGuideHtml = '';
 
             if (shift !== '휴무' && suggestedTeam) {
-              subCellClass += ' suggest-box';
+              suggestGuideHtml = `<span class="suggest-guide">${suggestedTeam}</span>`;
+              subCellClass += ' suggest-box'; 
             }
 
             teamHtml += `
               <div class="team-row ${isMyTeam}">
                 <div class="cell-shift ${getShiftClass(shift)}">${team}${getShortShift(shift)}</div>
                 <div class="${reqClass}" ${reqClick} title="${reqClick ? '클릭 시 휴무 신청' : ''}"></div>
-                <div class="${subCellClass}" ${subClick} title="휴무 신청이 없을 때는 대근 등록 불가"></div>
+                <div class="${subCellClass}" ${subClick} title="휴무 신청이 없을 때는 대근 등록 불가">${suggestGuideHtml}</div>
+              </div>
+            `;
+          }
+          // 3. 신청 내역이 이미 존재하지만(다른 팀원이 신청함), 내 소속 조이고 휴무가 아니며 내가 아직 신청하지 않은 경우 -> 본인도 추가로 신청할 수 있도록 빈 행 추가 렌더링
+          else if (team === currentUser.team && shift !== '휴무' && !hasMyRequest && !isManager()) {
+            let reqClick = `onclick="requestOff('${dateStr}', '${shift}')"`;
+            let reqClass = 'cell-name clickable';
+            
+            let subCellClass = 'cell-name clickable';
+            let subClick = `onclick="alert('🚫 해당 날짜/조에 휴무 신청(공석)이 없어 대근을 등록할 수 없습니다.');"`;
+            let suggestGuideHtml = '';
+
+            if (shift !== '휴무' && suggestedTeam) {
+              suggestGuideHtml = `<span class="suggest-guide">${suggestedTeam}</span>`;
+              subCellClass += ' suggest-box'; 
+            }
+
+            teamHtml += `
+              <div class="team-row ${isMyTeam}">
+                <div class="cell-shift ${getShiftClass(shift)}">${team}${getShortShift(shift)}</div>
+                <div class="${reqClass}" ${reqClick} title="클릭 시 휴무 신청"></div>
+                <div class="${subCellClass}" ${subClick} title="휴무 신청이 없을 때는 대근 등록 불가">${suggestGuideHtml}</div>
               </div>
             `;
           }
@@ -444,33 +387,28 @@
 
         const memoObj = memosData.find(m => m.date === dateStr);
         const memoText = memoObj ? memoObj.memo : '';
-        const safeMemoDisplay = escapeHtml(memoText);
-        const safeMemoForAttr = memoText.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const safeMemoText = memoText.replace(/'/g, "\\'"); 
 
         dayHtml += `
           <div class="team-row memo-row">
             <div class="cell-shift" style="color: #795548; font-size: 10px;">메모</div>
-            <div class="cell-name clickable"
-                 style="justify-content: flex-start; padding: 0 4px; font-size: 11px; font-weight: bold; color: #333;"
-                 onclick="editMemo('${dateStr}', '${safeMemoForAttr}')">${safeMemoDisplay}</div>
+            <div class="cell-name clickable" style="justify-content: flex-start; padding: 0 4px; font-size: 11px; font-weight: bold; color: #333;" 
+                 onclick="editMemo('${dateStr}', '${safeMemoText}')">${memoText}</div>
           </div>
-        </div>`;
+        </div>`; 
 
         grid.innerHTML += dayHtml;
       }
     }
 
-    // =====================================================================
-    // 휴무 신청
-    // =====================================================================
     async function requestOff(date, shift) {
       if (isManager()) {
-        alert("조 관리자 코드로 휴무 신청을 할 수 없습니다.");
+        alert("🚫 조 관리자 코드로 휴무 신청을 할 수 없습니다.");
         return;
       }
 
-      const reason = prompt(`[${date}] 휴무 사유를 적어주세요.\n(예: 연차, 경조사 등. 비워둬도 됩니다)\n\n취소를 누르면 신청되지 않습니다.`);
-      if (reason === null) return;
+      const reason = prompt(`[${date}] 휴무 사유를 적어주세요.\n(예: 연차, 경조사 등. 비워둬도 됩니다)\n\n※ 취소를 누르면 신청되지 않습니다.`);
+      if (reason === null) return; 
 
       const { error } = await supabaseClient.from('requests').insert([
         { requested_by: currentUser.name, team: currentUser.team, shift_type: shift, shift_date: date, reason: reason }
@@ -478,12 +416,9 @@
       if (!error) loadData();
     }
 
-    // =====================================================================
-    // 메모 편집
-    // =====================================================================
     async function editMemo(date, currentMemo) {
-      const newMemo = prompt(`[${date}] 일정/메모를 입력하세요.\n\n내용을 모두 지우고 확인을 누르면 삭제됩니다.`, currentMemo);
-      if (newMemo === null) return;
+      const newMemo = prompt(`[${date}] 일정/메모를 입력하세요.\n\n※ 내용을 모두 지우고 확인을 누르면 삭제됩니다.`, currentMemo);
+      if (newMemo === null) return; 
       if (newMemo.trim() === '') {
         await supabaseClient.from('daily_memos').delete().eq('date', date);
       } else {
@@ -494,13 +429,10 @@
       loadData();
     }
 
-    // =====================================================================
-    // 대근 등록
-    // =====================================================================
     async function acceptRequest(id, targetTeam, dateStr, shiftType) {
       let subName = currentUser.name;
       const targetDateObj = new Date(dateStr);
-
+      
       const expectedTeamStr = getSuggestedHelperTeam(targetTeam, shiftType, targetDateObj);
       const expectedTeamLetter = expectedTeamStr ? expectedTeamStr.replace('조', '') : '';
 
@@ -508,22 +440,24 @@
         subName = prompt(`이 근무를 대근할 분의 이름을 직접 입력하세요.\n(추천 대근 조: ${expectedTeamStr} 또는 당일 비번자)`, "");
         if (!subName || !subName.trim()) return;
         subName = subName.trim();
+        
+        let foundUser = null;
+        let subTeam = '';
+        for (let code in USER_DB) {
+          if (USER_DB[code].name === subName) {
+            foundUser = USER_DB[code];
+            subTeam = USER_DB[code].team;
+            break;
+          }
+        }
 
-        const { data: userData } = await supabaseClient
-          .from('users')
-          .select('*')
-          .eq('name', subName);
-
-        if (!userData || userData.length === 0) {
-          alert(`오류: "${subName}"은(는) 시스템에 등록되지 않은 사용자 이름입니다.`);
+        if (!foundUser) {
+          alert(`🚫 오류: "${subName}"은(는) 시스템에 등록되지 않은 사용자 이름입니다.`);
           return;
         }
 
-        const foundUser = userData[0];
-        const subTeam = foundUser.team;
-
         if (subTeam === targetTeam) {
-          alert(`오류: 같은 조(${targetTeam}조) 인원은 대근을 설 수 없습니다!`);
+          alert(`🚫 오류: 같은 조(${targetTeam}조) 인원은 대근을 설 수 없습니다!`);
           return;
         }
 
@@ -531,24 +465,24 @@
         const isOfficialHelper = (expectedTeamLetter && subTeam === expectedTeamLetter);
 
         if (!isOfficialHelper && subTeamShiftOnDay !== '휴무') {
-          alert(`오류: "${subName}" 님 소속(${subTeam}조)은 당일 비번(휴무) 조가 아니므로 대근을 설 수 없습니다.\n(지정 대근 조 또는 당일 휴무인 조 인원만 가능합니다)`);
+          alert(`🚫 오류: "${subName}" 님 소속(${subTeam}조)은 당일 비번(휴무) 조가 아니므로 대근을 설 수 없습니다.\n(지정 대근 조 또는 당일 휴무인 조 인원만 가능합니다)`);
           return;
         }
 
       } else {
         if (currentUser.team === targetTeam) {
-          alert(`오류: 같은 조 인원은 대근을 설 수 없습니다!`);
+          alert(`🚫 오류: 같은 조 인원은 대근을 설 수 없습니다!`);
           return;
         }
-
+        
         const myShiftOnDay = getShiftInfo(currentUser.team, targetDateObj);
         const isOfficialHelper = (expectedTeamLetter && currentUser.team === expectedTeamLetter);
 
         if (!isOfficialHelper && myShiftOnDay !== '휴무') {
-          alert(`오류: 현재 본인 소속(${currentUser.team}조)은 당일 비번(휴무) 조가 아니므로 대근을 설 수 없습니다.`);
+          alert(`🚫 오류: 현재 본인 소속(${currentUser.team}조)은 당일 비번(휴무) 조가 아니므로 대근을 설 수 없습니다.`);
           return;
         }
-        if (!confirm("이 근무를 대근하시겠습니까?")) return;
+        if(!confirm("이 근무를 대근하시겠습니까?")) return;
       }
 
       if (String(id).startsWith('new_')) {
@@ -567,17 +501,14 @@
       }
     }
 
-    // =====================================================================
-    // 대근 취소 / 휴무 삭제
-    // =====================================================================
     async function cancelSub(id) {
-      if (!confirm("해당 대근 내역을 취소(삭제)하시겠습니까?")) return;
+      if(!confirm("해당 대근 내역을 취소(삭제)하시겠습니까?")) return;
       const { error } = await supabaseClient.from('requests').update({ status: 'OPEN', filled_by: null }).eq('id', id);
       if (!error) loadData();
     }
 
     async function deleteRequest(id, type) {
-      if (!confirm(`${type}을(를) 취소(삭제)하시겠습니까?`)) return;
+      if(!confirm(`${type}을(를) 취소(삭제)하시겠습니까?`)) return;
       const { error } = await supabaseClient.from('requests').delete().eq('id', id);
       if (!error) loadData();
     }
