@@ -65,7 +65,10 @@
     <div class="card" style="margin-bottom: 10px; padding: 10px 15px;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <h2 id="welcomeMsg" style="margin: 0; font-size: 16px;">환영합니다!</h2>
-        <button onclick="logout()" class="btn-small" style="background-color: #6c757d;">로그아웃</button>
+        <div>
+          <button onclick="openChangeCodeModal()" class="btn-small" style="background-color: #28a745; margin-right: 5px;">코드변경</button>
+          <button onclick="logout()" class="btn-small" style="background-color: #6c757d;">로그아웃</button>
+        </div>
       </div>
     </div>
 
@@ -96,40 +99,6 @@
     const SUPABASE_URL = 'https://lqqjyedfwlqinppcrvjf.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxcWp5ZWRmd2xxaW5wcGNydmpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3MzQ3NDgsImV4cCI6MjEwNjMxMDc0OH0.8N5fmaNOdNG1hKDTzAYYX6Pd9bc0AnJvBzGQpfsndFo';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    const USER_DB = {
-      "1111": { name: "임병철", team: "A", role: "user" }, 
-      "1112": { name: "정성용", team: "A", role: "user" },
-      "1113": { name: "정준영", team: "A", role: "user" },
-      "1114": { name: "최민우", team: "A", role: "user" },
-      "1115": { name: "이현성", team: "A", role: "user" },
-      "1116": { name: "박형규", team: "A", role: "user" },
-      "1110": { name: "A조", team: "A", role: "team_admin" }, 
-      
-      "2111": { name: "백승학", team: "B", role: "user" }, 
-      "2112": { name: "이영식", team: "B", role: "user" },
-      "2113": { name: "강신혁", team: "B", role: "user" },
-      "gPflal0884@": { name: "장경준", team: "B", role: "admin" }, 
-      "2115": { name: "김영진", team: "B", role: "user" },
-      "2116": { name: "홍찬표", team: "B", role: "user" },
-      "2110": { name: "B조", team: "B", role: "team_admin" }, 
-      
-      "3111": { name: "김철종", team: "C", role: "user" }, 
-      "3112": { name: "조은래", team: "C", role: "user" },
-      "3113": { name: "황일선", team: "C", role: "user" }, 
-      "3114": { name: "하재오", team: "C", role: "user" },
-      "3115": { name: "임형빈", team: "C", role: "user" },
-      "3116": { name: "김정인", team: "C", role: "user" },
-      "3110": { name: "C조", team: "C", role: "team_admin" }, 
-
-      "4111": { name: "주영훈", team: "D", role: "user" }, 
-      "4112": { name: "홍동완", team: "D", role: "user" },
-      "4113": { name: "황호현", team: "D", role: "user" }, 
-      "4114": { name: "김종구", team: "D", role: "user" },
-      "4115": { name: "최정목", team: "D", role: "user" },
-      "4116": { name: "양석진", team: "D", role: "user" },
-      "4110": { name: "D조", team: "D", role: "team_admin" }, 
-    };
 
     const HOLIDAYS = {
       "2026-01-01": "신정", "2026-02-16": "설연휴", "2026-02-17": "설날", "2026-02-18": "설연휴",
@@ -202,22 +171,35 @@
       return 's-off';
     }
 
-    function login() {
+    // Supabase의 users 테이블에서 로그인 처리
+    async function login() {
       const code = document.getElementById('loginCode').value.trim();
-      if (USER_DB[code]) {
-        currentUser = USER_DB[code];
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('mainScreen').style.display = 'block';
-        
-        let roleBadge = '';
-        if (currentUser.role === 'admin') roleBadge = '👑(슈퍼관리자)';
-        if (currentUser.role === 'team_admin') roleBadge = '🛠️(조관리자)';
-        
-        document.getElementById('welcomeMsg').innerText = `[${currentUser.team}조] ${currentUser.name} 님 ${roleBadge}`;
-        loadData(); 
-      } else {
-        alert("코드가 일치하지 않습니다.");
+      if (!code) {
+        alert("코드를 입력해주세요.");
+        return;
       }
+
+      const { data, error } = await supabaseClient
+        .from('users')
+        .select('*')
+        .eq('code', code)
+        .single();
+
+      if (error || !data) {
+        alert("코드가 일치하지 않습니다.");
+        return;
+      }
+
+      currentUser = data; // { name, team, role, code }
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('mainScreen').style.display = 'block';
+      
+      let roleBadge = '';
+      if (currentUser.role === 'admin') roleBadge = '👑(슈퍼관리자)';
+      if (currentUser.role === 'team_admin') roleBadge = '🛠️(조관리자)';
+      
+      document.getElementById('welcomeMsg').innerText = `[${currentUser.team}조] ${currentUser.name} 님 ${roleBadge}`;
+      loadData(); 
     }
 
     function logout() {
@@ -225,6 +207,43 @@
       document.getElementById('loginCode').value = '';
       document.getElementById('mainScreen').style.display = 'none';
       document.getElementById('loginScreen').style.display = 'block';
+    }
+
+    // 💡 개개인이 직접 본인의 개인 코드를 변경하는 기능
+    async function openChangeCodeModal() {
+      const newCode = prompt(`[${currentUser.name} 님] 변경할 새로운 개인 코드를 입력하세요.\n(4자리 이상 숫자 또는 문자)`);
+      if (newCode === null) return;
+      
+      const trimmedCode = newCode.trim();
+      if (trimmedCode.length < 2) {
+        alert("코드는 최소 2자리 이상이어야 합니다.");
+        return;
+      }
+
+      // 이미 다른 사람이 사용 중인 코드인지 중복 검사
+      const { data: existingUser } = await supabaseClient
+        .from('users')
+        .select('*')
+        .eq('code', trimmedCode);
+
+      if (existingUser && existingUser.length > 0) {
+        alert("🚫 이미 다른 사람이 사용 중인 코드입니다. 다른 코드를 입력해주세요.");
+        return;
+      }
+
+      // Supabase users 테이블에서 본인 이름 기준으로 code 업데이트
+      const { error: updateError } = await supabaseClient
+        .from('users')
+        .update({ code: trimmedCode })
+        .eq('name', currentUser.name);
+
+      if (updateError) {
+        alert("코드 변경에 실패했습니다. 다시 시도해 주세요.");
+        return;
+      }
+
+      alert("✨ 개인 코드가 성공적으로 변경되었습니다!\n변경된 코드로 다시 로그인해 주세요.");
+      logout();
     }
 
     function changeMonth(delta) {
@@ -341,7 +360,6 @@
                 reqClass += ' clickable';
               }
               
-              // 💡 휴무 칸이 비어있을 때는 대근 칸을 눌러도 입력되지 않도록 수정 (경고 팝업 출력)
               let subCellClass = 'cell-name clickable';
               let subClick = `onclick="alert('🚫 해당 날짜/조에 휴무 신청(공석)이 없어 대근을 등록할 수 없습니다.');"`;
 
@@ -406,6 +424,7 @@
       loadData();
     }
 
+    // Supabase users 테이블 기반 대근자 검증 로직
     async function acceptRequest(id, targetTeam, dateStr, shiftType) {
       let subName = currentUser.name;
       const targetDateObj = new Date(dateStr);
@@ -418,20 +437,18 @@
         if (!subName || !subName.trim()) return;
         subName = subName.trim();
         
-        let foundUser = null;
-        let subTeam = '';
-        for (let code in USER_DB) {
-          if (USER_DB[code].name === subName) {
-            foundUser = USER_DB[code];
-            subTeam = USER_DB[code].team;
-            break;
-          }
-        }
+        const { data: userData } = await supabaseClient
+          .from('users')
+          .select('*')
+          .eq('name', subName);
 
-        if (!foundUser) {
+        if (!userData || userData.length === 0) {
           alert(`🚫 오류: "${subName}"은(는) 시스템에 등록되지 않은 사용자 이름입니다.`);
           return;
         }
+
+        const foundUser = userData[0];
+        const subTeam = foundUser.team;
 
         if (subTeam === targetTeam) {
           alert(`🚫 오류: 같은 조(${targetTeam}조) 인원은 대근을 설 수 없습니다!`);
