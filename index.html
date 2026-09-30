@@ -171,15 +171,14 @@
       return 's-off';
     }
 
-    // Supabase의 users 테이블에서 로그인 처리
-  async function login() {
+    // 💡 Supabase users 테이블 기반 로그인 (안정성 강화)
+    async function login() {
       const code = document.getElementById('loginCode').value.trim();
       if (!code) {
         alert("코드를 입력해주세요.");
         return;
       }
 
-      // .single()을 제거하고 배열 형태로 조회
       const { data, error } = await supabaseClient
         .from('users')
         .select('*')
@@ -190,7 +189,7 @@
         return;
       }
 
-      currentUser = data[0]; // 조회된 결과 중 첫 번째 사용자 선택
+      currentUser = data[0];
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('mainScreen').style.display = 'block';
       
@@ -209,7 +208,7 @@
       document.getElementById('loginScreen').style.display = 'block';
     }
 
-    // 💡 개개인이 직접 본인의 개인 코드를 변경하는 기능
+    // 💡 개개인별 실시간 코드 변경 기능
     async function openChangeCodeModal() {
       const newCode = prompt(`[${currentUser.name} 님] 변경할 새로운 개인 코드를 입력하세요.\n(4자리 이상 숫자 또는 문자)`);
       if (newCode === null) return;
@@ -220,7 +219,7 @@
         return;
       }
 
-      // 이미 다른 사람이 사용 중인 코드인지 중복 검사
+      // 중복 코드 검사
       const { data: existingUser } = await supabaseClient
         .from('users')
         .select('*')
@@ -231,7 +230,7 @@
         return;
       }
 
-      // Supabase users 테이블에서 본인 이름 기준으로 code 업데이트
+      // Supabase users 테이블 업데이트
       const { error: updateError } = await supabaseClient
         .from('users')
         .update({ code: trimmedCode })
@@ -424,7 +423,7 @@
       loadData();
     }
 
-    // Supabase users 테이블 기반 대근자 검증 로직
+    // Supabase users 테이블 연동 대근자 검증 로직
     async function acceptRequest(id, targetTeam, dateStr, shiftType) {
       let subName = currentUser.name;
       const targetDateObj = new Date(dateStr);
