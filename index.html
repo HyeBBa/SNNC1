@@ -33,6 +33,11 @@
     .cell-shift { width: 45px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; font-weight: bold; border-right: 1px solid #eee; }
     .cell-name { flex: 1; display: flex; justify-content: center; align-items: center; border-right: 1px solid #eee; color: #495057; position: relative; }
     .cell-name:last-child { border-right: none; }
+
+    /* 휴무 신청 입력칸(가운데 칸)만 흰색 처리 */
+    .off-request-cell {
+      background-color: #ffffff !important;
+    }
     
     .clickable { cursor: pointer; }
     .clickable:hover { background-color: #f1f3f5; }
@@ -41,7 +46,7 @@
     
     .req-data { color: #1e8449; } 
     
-    .sub-data { color: #27ae60; background-color: #e8f8f5; width: 100%; height: 100%; justify-content: center;}
+    .sub-data { color: #27ae60; background-color: #e8f8f5; width: 100%; height: 100%; justify-content: center; display: flex; align-items: center; }
     .reason-text { font-size: 10px; color: #888; font-weight: normal; } 
     
     .suggest-box { background-color: #e2e8f0; } 
@@ -95,7 +100,7 @@
 
   <script>
     const SUPABASE_URL = 'https://lqqjyedfwlqinppcrvjf.supabase.co';
-    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxcWp5ZWRmd2xxaW5wcGNydmpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3MzQ3NDgsImV4cCI6MjEwNjMxMDc0OH0.8N5fmaNOdNG1hKDTzAYYX6Pd9bc0AnJvBzGQpfsndFo';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const HOLIDAYS = {
@@ -253,28 +258,28 @@
       const firstDay = new Date(currentYear, currentMonth, 1).getDay();
       const lastDate = new Date(currentYear, currentMonth + 1, 0).getDate();
 
-      for(let i = 0; i < firstDay; i++) { 
-        grid.innerHTML += `<div></div>`; 
+      for (let i = 0; i < firstDay; i++) {
+        grid.innerHTML += `<div></div>`;
       }
 
-      for(let d = 1; d <= lastDate; d++) {
+      for (let d = 1; d <= lastDate; d++) {
         const dateObj = new Date(currentYear, currentMonth, d);
         const yyyy = currentYear;
         const mm = String(currentMonth + 1).padStart(2, '0');
         const dd = String(d).padStart(2, '0');
-        const dateStr = `${yyyy}-${mm}-${dd}`; 
-        const dayOfWeek = dateObj.getDay(); 
+        const dateStr = `${yyyy}-${mm}-${dd}`;
+        const dayOfWeek = dateObj.getDay();
 
         const holidayName = HOLIDAYS[dateStr];
         let dateColorStyle = '';
         if (dayOfWeek === 0 || holidayName) {
-          dateColorStyle = 'color: #e74c3c;'; 
+          dateColorStyle = 'color: #e74c3c;';
         } else if (dayOfWeek === 6) {
-          dateColorStyle = 'color: #007bff;'; 
+          dateColorStyle = 'color: #007bff;';
         }
 
         let holidayHtml = holidayName ? `<span class="holiday-name">(${holidayName})</span>` : '';
-        
+
         let dayHtml = `
           <div class="day-cell">
             <div class="day-header-bar">
@@ -285,9 +290,10 @@
         TEAMS.forEach(team => {
           const shift = getShiftInfo(team, dateObj);
           const isMyTeam = (currentUser && team === currentUser.team) ? 'my-team-row' : '';
+          const offRequestClass = (shift === '휴무') ? 'off-request-cell' : '';
           const reqsForTeam = requestsData.filter(r => r.shift_date === dateStr && r.team === team);
           const hasMyRequest = currentUser ? reqsForTeam.some(r => r.requested_by === currentUser.name) : false;
-          
+
           let teamHtml = '';
           let suggestedTeam = '';
           if (shift !== '휴무') {
@@ -298,22 +304,22 @@
             reqsForTeam.forEach(req => {
               let reasonHtml = req.reason ? `<span class="reason-text">(${req.reason})</span>` : '';
               let reqName = `<div class="has-data req-data"><span>${req.requested_by}</span>${reasonHtml}</div>`;
-              
+
               let reqClick = '';
-              let reqClass = 'cell-name';
+              let reqClass = `cell-name ${offRequestClass}`;
               if (currentUser && req.requested_by === currentUser.name) {
                 reqClick = `onclick="deleteRequest('${req.id}', '휴무 신청')"`;
                 reqClass += ' clickable';
               }
-              
+
               let subName = '';
               let subClick = '';
               let subCellClass = 'cell-name clickable';
 
               if (req.filled_by) {
                 subName = `<div class="has-data sub-data"><span>${req.filled_by}</span></div>`;
-                subClick = (currentUser && (req.filled_by === currentUser.name || isManager())) 
-                           ? `onclick="cancelSub('${req.id}')"` : '';
+                subClick = (currentUser && (req.filled_by === currentUser.name || isManager()))
+                  ? `onclick="cancelSub('${req.id}')"` : '';
               } else {
                 if (suggestedTeam) {
                   subName = `<span class="suggest-guide">${suggestedTeam}</span>`;
@@ -330,23 +336,23 @@
                 </div>
               `;
             });
-          } 
-          
+          }
+
           if (reqsForTeam.length === 0) {
             let reqClick = '';
-            let reqClass = 'cell-name';
+            let reqClass = `cell-name ${offRequestClass}`;
             if (currentUser && !isManager() && team === currentUser.team && shift !== '휴무') {
               reqClick = `onclick="requestOff('${dateStr}', '${shift}')"`;
               reqClass += ' clickable';
             }
-            
+
             let subCellClass = 'cell-name clickable';
             let subClick = `onclick="alert('🚫 해당 날짜/조에 휴무 신청(공석)이 없어 대근을 등록할 수 없습니다.');"`;
             let suggestGuideHtml = '';
 
             if (shift !== '휴무' && suggestedTeam) {
               suggestGuideHtml = `<span class="suggest-guide">${suggestedTeam}</span>`;
-              subCellClass += ' suggest-box'; 
+              subCellClass += ' suggest-box';
             }
 
             teamHtml += `
@@ -359,15 +365,15 @@
           }
           else if (currentUser && team === currentUser.team && shift !== '휴무' && !hasMyRequest && !isManager()) {
             let reqClick = `onclick="requestOff('${dateStr}', '${shift}')"`;
-            let reqClass = 'cell-name clickable';
-            
+            let reqClass = `cell-name ${offRequestClass} clickable`;
+
             let subCellClass = 'cell-name clickable';
             let subClick = `onclick="alert('🚫 해당 날짜/조에 휴무 신청(공석)이 없어 대근을 등록할 수 없습니다.');"`;
             let suggestGuideHtml = '';
 
             if (shift !== '휴무' && suggestedTeam) {
               suggestGuideHtml = `<span class="suggest-guide">${suggestedTeam}</span>`;
-              subCellClass += ' suggest-box'; 
+              subCellClass += ' suggest-box';
             }
 
             teamHtml += `
@@ -384,15 +390,15 @@
 
         const memoObj = memosData.find(m => m.date === dateStr);
         const memoText = memoObj ? memoObj.memo : '';
-        const safeMemoText = memoText.replace(/'/g, "\\'"); 
+        const safeMemoText = memoText.replace(/'/g, "\\'");
 
         dayHtml += `
           <div class="team-row memo-row">
             <div class="cell-shift" style="color: #795548; font-size: 10px;">메모</div>
-            <div class="cell-name clickable" style="justify-content: flex-start; padding: 0 4px; font-size: 11px; font-weight: bold; color: #333;" 
+            <div class="cell-name clickable" style="justify-content: flex-start; padding: 0 4px; font-size: 11px; font-weight: bold; color: #333;"
                  onclick="editMemo('${dateStr}', '${safeMemoText}')">${memoText}</div>
           </div>
-        </div>`; 
+        </div>`;
 
         grid.innerHTML += dayHtml;
       }
@@ -410,7 +416,7 @@
       }
 
       const reason = prompt(`[${date}] 휴무 사유를 적어주세요.\n(예: 연차, 경조사 등. 비워둬도 됩니다)\n\n※ 취소를 누르면 신청되지 않습니다.`);
-      if (reason === null) return; 
+      if (reason === null) return;
 
       const { error } = await supabaseClient.from('requests').insert([
         { requested_by: currentUser.name, team: currentUser.team, shift_type: shift, shift_date: date, reason: reason, status: 'OPEN' }
@@ -430,8 +436,8 @@
       }
 
       const newMemo = prompt(`[${date}] 일정/메모를 입력하세요.\n\n※ 내용을 모두 지우고 확인을 누르면 삭제됩니다.`, currentMemo);
-      if (newMemo === null) return; 
-      
+      if (newMemo === null) return;
+
       let error;
       if (newMemo.trim() === '') {
         const res = await supabaseClient.from('daily_memos').delete().eq('date', date);
@@ -458,7 +464,7 @@
 
       let subName = currentUser.name;
       const targetDateObj = new Date(dateStr);
-      
+
       const expectedTeamStr = getSuggestedHelperTeam(targetTeam, shiftType, targetDateObj);
       const expectedTeamLetter = expectedTeamStr ? expectedTeamStr.replace('조', '') : '';
 
@@ -466,7 +472,7 @@
         subName = prompt(`이 근무를 대근할 분의 이름을 직접 입력하세요.\n(추천 대근 조: ${expectedTeamStr} 또는 당일 비번자)`, "");
         if (!subName || !subName.trim()) return;
         subName = subName.trim();
-        
+
         const { data: userRows, error: userError } = await supabaseClient
           .from('app_users')
           .select('name, team, role, is_active')
@@ -504,7 +510,7 @@
           alert(`🚫 오류: 같은 조 인원은 대근을 설 수 없습니다!`);
           return;
         }
-        
+
         const myShiftOnDay = getShiftInfo(currentUser.team, targetDateObj);
         const isOfficialHelper = (expectedTeamLetter && currentUser.team === expectedTeamLetter);
 
@@ -512,7 +518,7 @@
           alert(`🚫 오류: 현재 본인 소속(${currentUser.team}조)은 당일 비번(휴무) 조가 아니므로 대근을 설 수 없습니다.`);
           return;
         }
-        if(!confirm("이 근무를 대근하시겠습니까?")) return;
+        if (!confirm("이 근무를 대근하시겠습니까?")) return;
       }
 
       let error;
@@ -544,7 +550,7 @@
         return;
       }
 
-      if(!confirm("해당 대근 내역을 취소(삭제)하시겠습니까?")) return;
+      if (!confirm("해당 대근 내역을 취소(삭제)하시겠습니까?")) return;
       const { error } = await supabaseClient.from('requests').update({ status: 'OPEN', filled_by: null }).eq('id', id);
       if (error) {
         alert("❌ 대근 취소 실패: " + error.message);
@@ -559,7 +565,7 @@
         return;
       }
 
-      if(!confirm(`${type}을(를) 취소(삭제)하시겠습니까?`)) return;
+      if (!confirm(`${type}을(를) 취소(삭제)하시겠습니까?`)) return;
       const { error } = await supabaseClient.from('requests').delete().eq('id', id);
       if (error) {
         alert("❌ 삭제 실패: " + error.message);
