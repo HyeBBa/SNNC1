@@ -172,25 +172,25 @@
     }
 
     // Supabase의 users 테이블에서 로그인 처리
-    async function login() {
+  async function login() {
       const code = document.getElementById('loginCode').value.trim();
       if (!code) {
         alert("코드를 입력해주세요.");
         return;
       }
 
+      // .single()을 제거하고 배열 형태로 조회
       const { data, error } = await supabaseClient
         .from('users')
         .select('*')
-        .eq('code', code)
-        .single();
+        .eq('code', code);
 
-      if (error || !data) {
+      if (error || !data || data.length === 0) {
         alert("코드가 일치하지 않습니다.");
         return;
       }
 
-      currentUser = data; // { name, team, role, code }
+      currentUser = data[0]; // 조회된 결과 중 첫 번째 사용자 선택
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('mainScreen').style.display = 'block';
       
