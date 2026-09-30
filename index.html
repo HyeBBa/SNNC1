@@ -240,7 +240,10 @@
         supabaseClient.from('daily_memos').select('*')
       ]);
 
-      if (reqRes.error || memoRes.error) { alert("데이터를 불러오지 못했습니다."); return; }
+      if (reqRes.error || memoRes.error) { 
+        alert("데이터를 불러오지 못했습니다: " + (reqRes.error?.message || memoRes.error?.message)); 
+        return; 
+      }
       
       requestsData = reqRes.data || [];
       memosData = memoRes.data || [];
@@ -294,7 +297,6 @@
             suggestedTeam = getSuggestedHelperTeam(team, shift, dateObj);
           }
 
-          // 1. 해당 조에 등록된 휴무 신청 내역이 있으면 모두 렌더링
           if (reqsForTeam.length > 0) {
             reqsForTeam.forEach(req => {
               let reasonHtml = req.reason ? `<span class="reason-text">(${req.reason})</span>` : '';
@@ -333,7 +335,6 @@
             });
           } 
           
-          // 2. 해당 조에 신청 내역이 아예 없는 경우 -> 빈 행 렌더링
           if (reqsForTeam.length === 0) {
             let reqClick = '';
             let reqClass = 'cell-name';
@@ -359,7 +360,6 @@
               </div>
             `;
           }
-          // 3. 신청 내역이 이미 존재하지만(다른 팀원이 신청함), 내 소속 조이고 휴무가 아니며 내가 아직 신청하지 않은 경우 -> 본인도 추가로 신청할 수 있도록 빈 행 추가 렌더링
           else if (team === currentUser.team && shift !== '휴무' && !hasMyRequest && !isManager()) {
             let reqClick = `onclick="requestOff('${dateStr}', '${shift}')"`;
             let reqClass = 'cell-name clickable';
@@ -401,6 +401,7 @@
       }
     }
 
+    // 💡 에러 확인용 alert 추가된 휴무 신청 함수
     async function requestOff(date, shift) {
       if (isManager()) {
         alert("🚫 조 관리자 코드로 휴무 신청을 할 수 없습니다.");
@@ -413,20 +414,35 @@
       const { error } = await supabaseClient.from('requests').insert([
         { requested_by: currentUser.name, team: currentUser.team, shift_type: shift, shift_date: date, reason: reason }
       ]);
-      if (!error) loadData();
+
+      if (error) {
+        alert("❌ 휴무 신청 저장 실패: " + error.message);
+        console.error(error);
+      } else {
+        loadData();
+      }
     }
 
     async function editMemo(date, currentMemo) {
       const newMemo = prompt(`[${date}] 일정/메모를 입력하세요.\n\n※ 내용을 모두 지우고 확인을 누르면 삭제됩니다.`, currentMemo);
       if (newMemo === null) return; 
+      
+      let error;
       if (newMemo.trim() === '') {
-        await supabaseClient.from('daily_memos').delete().eq('date', date);
+        const res = await supabaseClient.from('daily_memos').delete().eq('date', date);
+        error = res.error;
       } else {
-        await supabaseClient.from('daily_memos').upsert([
+        const res = await supabaseClient.from('daily_memos').upsert([
           { date: date, memo: newMemo, created_by: currentUser.name }
         ]);
+        error = res.error;
       }
-      loadData();
+
+      if (error) {
+        alert("❌ 메모 저장 실패: " + error.message);
+      } else {
+        loadData();
+      }
     }
 
     async function acceptRequest(id, targetTeam, dateStr, shiftType) {
@@ -485,32 +501,47 @@
         if(!confirm("이 근무를 대근하시겠습니까?")) return;
       }
 
+      let error;
       if (String(id).startsWith('new_')) {
         const parts = id.split('_');
         const tTeam = parts[1];
         const tDate = parts[2];
         const shift = getShiftInfo(tTeam, new Date(tDate));
 
-        const { error } = await supabaseClient.from('requests').insert([
+        const res = await supabaseClient.from('requests').insert([
           { requested_by: `${tTeam}조 공석`, team: tTeam, shift_type: shift, shift_date: tDate, reason: '지정 대근', status: 'FILLED', filled_by: subName }
         ]);
-        if (!error) loadData();
+        error = res.error;
       } else {
-        const { error } = await supabaseClient.from('requests').update({ status: 'FILLED', filled_by: subName }).eq('id', id);
-        if (!error) loadData();
+        const res = await supabaseClient.from('requests').update({ status: 'FILLED', filled_by: subName }).eq('id', id);
+        error = res.error;
+      }
+
+      if (error) {
+        alert("❌ 대근 등록 실패: " + error.message);
+      } else {
+        loadData();
       }
     }
 
     async function cancelSub(id) {
       if(!confirm("해당 대근 내역을 취소(삭제)하시겠습니까?")) return;
       const { error } = await supabaseClient.from('requests').update({ status: 'OPEN', filled_by: null }).eq('id', id);
-      if (!error) loadData();
+      if (error) {
+        alert("❌ 대근 취소 실패: " + error.message);
+      } else {
+        loadData();
+      }
     }
 
     async function deleteRequest(id, type) {
       if(!confirm(`${type}을(를) 취소(삭제)하시겠습니까?`)) return;
       const { error } = await supabaseClient.from('requests').delete().eq('id', id);
-      if (!error) loadData();
+      if (error) {
+        alert("❌ 삭제 실패: " + error.message);
+      } else {
+        loadData();
+      }
     }
   </script>
 </body>
