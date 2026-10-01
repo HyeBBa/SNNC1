@@ -263,19 +263,6 @@
 
     <button onclick="login()">로그인</button>
 
-    <button
-      id="installAppButton"
-      type="button"
-      onclick="installPWA()"
-      style="
-        display: none;
-        margin-top: 8px;
-        background-color: #28a745;
-      "
-    >
-      📱 앱으로 설치하기
-    </button>
-
   </div>
 
 
@@ -1605,6 +1592,20 @@
     }
 
 
+    // 현재 월에서 휴무 신청이 가장 많은 날짜를 기준으로
+    // 모든 날짜의 높이를 동일하게 맞춥니다.
+    const maxOffRequestRows = Math.max(
+      0,
+      ...Array.from({ length: lastDate }, (_, index) => {
+        const checkDate =
+          `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(index + 1).padStart(2, '0')}`;
+
+        return requestsData.filter(
+          r => r.shift_date === checkDate
+        ).length;
+      })
+    );
+
     for (
       let d = 1;
       d <= lastDate;
@@ -2067,13 +2068,43 @@
           `;
 
         }
-
-
         dayHtml +=
           teamHtml;
 
-      });
+        // 실제 휴무 신청 행이 적은 날짜에는 빈 행을 추가합니다.
+        // 따라서 해당 월의 모든 날짜가 동일한 높이를 유지합니다.
+        const offRequestCountForDate =
+          requestsData.filter(
+            r => r.shift_date === dateStr
+          ).length;
 
+        const emptyRowsNeeded =
+          Math.max(
+            0,
+            maxOffRequestRows - offRequestCountForDate
+          );
+
+        for (
+          let emptyIndex = 0;
+          emptyIndex < emptyRowsNeeded;
+          emptyIndex++
+        ) {
+          dayHtml += `
+            <div
+              class="team-row"
+              style="
+                visibility: hidden;
+                pointer-events: none;
+              "
+              aria-hidden="true"
+            >
+              <div class="cell-shift">휴</div>
+              <div class="cell-name"></div>
+              <div class="cell-name"></div>
+            </div>
+          `;
+        }
+      });
 
       /*
        * ==================================
@@ -3025,139 +3056,6 @@
       }
     );
 
-</script>
-
-<script>
-  /*
-   * ==========================================
-   * PWA 앱 설치
-   * ==========================================
-   */
-
-  let deferredInstallPrompt = null;
-
-  function isStandaloneMode() {
-    return (
-      window.matchMedia('(display-mode: standalone)').matches ||
-      window.navigator.standalone === true
-    );
-  }
-
-  function isIOSDevice() {
-    return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
-  }
-
-  function isSafariBrowser() {
-    const ua = window.navigator.userAgent;
-    return (
-      /safari/i.test(ua) &&
-      !/chrome|crios|android|fxios|edgios/i.test(ua)
-    );
-  }
-
-  function updateInstallButton() {
-    const button = document.getElementById('installAppButton');
-
-    if (!button) {
-      return;
-    }
-
-    if (isStandaloneMode()) {
-      button.style.display = 'none';
-      return;
-    }
-
-    if (deferredInstallPrompt) {
-      button.style.display = 'block';
-      button.innerText = '📱 앱으로 설치하기';
-      return;
-    }
-
-    if (isIOSDevice()) {
-      button.style.display = 'block';
-      button.innerText = '📱 홈 화면에 추가하기';
-      return;
-    }
-
-    button.style.display = 'block';
-    button.innerText = '📱 앱으로 설치하기';
-  }
-
-  window.addEventListener('beforeinstallprompt', (event) => {
-    event.preventDefault();
-    deferredInstallPrompt = event;
-    updateInstallButton();
-  });
-
-  window.addEventListener('appinstalled', () => {
-    deferredInstallPrompt = null;
-    updateInstallButton();
-  });
-
-  async function installPWA() {
-    const button = document.getElementById('installAppButton');
-
-    if (isStandaloneMode()) {
-      return;
-    }
-
-    if (deferredInstallPrompt) {
-      const promptEvent = deferredInstallPrompt;
-      deferredInstallPrompt = null;
-
-      if (button) {
-        button.disabled = true;
-        button.innerText = '설치 창을 확인해 주세요';
-      }
-
-      try {
-        await promptEvent.prompt();
-        const choice = await promptEvent.userChoice;
-
-        if (choice.outcome === 'accepted') {
-          if (button) {
-            button.style.display = 'none';
-          }
-        } else {
-          updateInstallButton();
-        }
-      } catch (error) {
-        console.warn('PWA 설치 실행 실패:', error);
-        updateInstallButton();
-      } finally {
-        if (button) {
-          button.disabled = false;
-        }
-      }
-
-      return;
-    }
-
-    if (isIOSDevice()) {
-      alert(
-        '📱 아이폰/아이패드에서 앱으로 추가하는 방법\n\n' +
-        '1. Safari에서 이 사이트를 열어주세요.\n' +
-        '2. 화면의 공유 버튼(□↑)을 누르세요.\n' +
-        '3. "홈 화면에 추가"를 선택하세요.\n' +
-        '4. "추가"를 누르면 앱 아이콘이 홈 화면에 만들어집니다.'
-      );
-      return;
-    }
-
-    const browserHint =
-      isSafariBrowser()
-        ? 'Safari에서는 브라우저의 공유 메뉴에서 "홈 화면에 추가"를 이용해 주세요.'
-        : '현재 브라우저에서는 설치 메뉴가 별도로 제공될 수 있습니다. 브라우저 메뉴에서 "앱 설치" 또는 "홈 화면에 추가"를 찾아주세요.';
-
-    alert(
-      '📱 앱 설치 안내\n\n' +
-      browserHint
-    );
-  }
-
-  window.addEventListener('load', () => {
-    updateInstallButton();
-  });
 </script>
 
 <script>
