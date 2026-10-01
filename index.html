@@ -140,7 +140,12 @@
     .memo-row {
       border-top: 1px solid #ccc;
       background-color: #fff9c4;
-      border-bottom: none;
+
+      /*
+       * 메모 아래쪽을 진한 선으로 표시해
+       * 주(週)와 다음 주의 경계를 명확하게 구분합니다.
+       */
+      border-bottom: 3px solid #8a8a8a;
 
       /*
        * 같은 주의 날짜 칸 높이가 서로 다르더라도
@@ -148,6 +153,7 @@
        * 모든 날짜의 메모 시작선을 일치시킵니다.
        */
       margin-top: auto;
+      box-sizing: border-box;
     }
 
     .my-team-row {
