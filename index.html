@@ -6,6 +6,13 @@
   <title>SNNC 환원반 휴무계획표</title>
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#007bff">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+
   <style>
     body {
       font-family: 'Malgun Gothic', sans-serif;
@@ -88,10 +95,6 @@
       border-bottom: 1px solid #ccc;
       display: flex;
       flex-direction: column;
-
-      /* CSS Grid가 정한 해당 주의 높이까지 날짜 칸을 채웁니다. */
-      height: 100%;
-      box-sizing: border-box;
     }
 
     .day-header-bar {
@@ -140,20 +143,7 @@
     .memo-row {
       border-top: 1px solid #ccc;
       background-color: #fff9c4;
-
-      /*
-       * 메모 아래쪽을 진한 선으로 표시해
-       * 주(週)와 다음 주의 경계를 명확하게 구분합니다.
-       */
-      border-bottom: 3px solid #8a8a8a;
-
-      /*
-       * 같은 주의 날짜 칸 높이가 서로 다르더라도
-       * 메모를 날짜 칸의 맨 아래로 밀어
-       * 모든 날짜의 메모 시작선을 일치시킵니다.
-       */
-      margin-top: auto;
-      box-sizing: border-box;
+      border-bottom: none;
     }
 
     .my-team-row {
@@ -1590,6 +1580,99 @@
       ).getDate();
 
 
+    /*
+     * ==========================================
+     * 주별 / 조별 휴무 행 수 계산
+     * ==========================================
+     *
+     * 핵심:
+     * A조에서 휴무 신청이 1건 발생하면
+     * 그 주의 모든 날짜에 A조 행을 1줄 확보합니다.
+     *
+     * B조에서 2건이면
+     * 그 주의 모든 날짜에 B조 행을 2줄 확보합니다.
+     *
+     * 따라서 조의 행이 다른 조를 밀어내지 않고,
+     * A → B → C → D 순서가 모든 날짜에서 유지됩니다.
+     */
+
+    const weekTeamRows = {};
+
+
+    for (
+      let checkDay = 1;
+      checkDay <= lastDate;
+      checkDay++
+    ) {
+
+      const checkDate =
+        new Date(
+          currentYear,
+          currentMonth,
+          checkDay
+        );
+
+
+      const checkDateStr =
+        `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(checkDay).padStart(2, '0')}`;
+
+
+      const weekStartDay =
+        checkDay -
+        checkDate.getDay() +
+        1;
+
+
+      const weekKey =
+        `${currentYear}-${currentMonth}-${weekStartDay}`;
+
+
+      if (!weekTeamRows[weekKey]) {
+        weekTeamRows[weekKey] = {};
+      }
+
+
+      TEAMS.forEach(team => {
+
+        const requestCount =
+          requestsData.filter(
+            r =>
+              r.shift_date === checkDateStr &&
+              r.team === team
+          ).length;
+
+
+        /*
+         * 기본 조 행은 항상 1개 유지하고,
+         * 휴무 신청자 수만큼 그 바로 아래에 추가 행을 만듭니다.
+         *
+         * 예:
+         * 신청 0명 → 기본 1행
+         * 신청 1명 → 기본 1행 + 추가 1행 = 2행
+         * 신청 2명 → 기본 1행 + 추가 2행 = 3행
+         */
+        /*
+         * 해당 주의 이 조는:
+         * - 휴무 신청자 N명
+         * - + 다음 신청을 위한 빈 행 1개
+         *
+         * 총 N + 1행을 확보합니다.
+         *
+         * 신청 0명 → 기본 1행
+         * 신청 1명 → 신청자 1행 + 빈 행 1개 = 2행
+         * 신청 2명 → 신청자 2행 + 빈 행 1개 = 3행
+         */
+        weekTeamRows[weekKey][team] =
+          Math.max(
+            weekTeamRows[weekKey][team] || 1,
+            requestCount + 1
+          );
+
+      });
+
+    }
+
+
     for (
       let i = 0;
       i < firstDay;
@@ -1601,109 +1684,6 @@
 
     }
 
-
-    /*
-     * ==========================================
-     * 월 전체 행 높이 통일
-     * ==========================================
-     *
-     * 한 날짜/조에 휴무 신청이 생기면 기존 구조에서는
-     * 그 조만 신청자 수만큼 행이 늘어납니다.
-     *
-     * 이 때문에 같은 주의 다른 날짜와 높이가 달라졌습니다.
-     * 현재 월에서 가장 많은 휴무 신청이 들어간 조를 기준으로
-     * 모든 날짜의 모든 조가 같은 행 수를 갖도록 맞춥니다.
-     *
-     * 신청이 N건 있는 조는 N건 + 빈 신청행 1개를 기준으로 합니다.
-     * 신청이 없는 조는 기본 1행입니다.
-     */
-    /*
-     * ==========================================
-     * 주별 최대 전체 행 수 계산
-     * ==========================================
-     *
-     * 메모 행이 정확히 같은 위치에 오도록,
-     * 각 날짜에서 실제로 렌더링되는 A/B/C/D조 전체 행 수를
-     * 먼저 계산합니다.
-     *
-     * 같은 주에서는 가장 많은 행을 가진 날짜를 기준으로
-     * 나머지 날짜에 빈 행을 추가합니다.
-     */
-    const weekMaxTeamRows = {};
-
-    for (let checkDay = 1; checkDay <= lastDate; checkDay++) {
-      const checkDate =
-        new Date(
-          currentYear,
-          currentMonth,
-          checkDay
-        );
-
-      const checkDateStr =
-        `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(checkDay).padStart(2, '0')}`;
-
-      const weekStartDay =
-        checkDay - checkDate.getDay() + 1;
-
-      const weekKey =
-        `${currentYear}-${currentMonth}-${weekStartDay}`;
-
-      let totalRowsForDate = 0;
-
-      TEAMS.forEach(checkTeam => {
-        const checkShift =
-          getShiftInfo(
-            checkTeam,
-            checkDate
-          );
-
-        const checkRequests =
-          requestsData.filter(
-            r =>
-              r.shift_date === checkDateStr &&
-              r.team === checkTeam
-          );
-
-        if (checkRequests.length === 0) {
-          // 휴무 신청이 없으면 기본 1행
-          totalRowsForDate += 1;
-          return;
-        }
-
-        // 신청자 수만큼 실제 신청 행이 생김
-        totalRowsForDate += checkRequests.length;
-
-        const checkHasMyRequest =
-          currentUser
-            ? checkRequests.some(
-                r =>
-                  r.requested_by ===
-                  currentUser.name
-              )
-            : false;
-
-        // 기존 코드에서 '내가 아직 신청하지 않은 경우'에
-        // 추가 신청용 빈 행 1개가 생기는 조건을 그대로 반영
-        const hasAdditionalRequestRow =
-          canRequestOff() &&
-          checkShift !== '휴무' &&
-          !checkHasMyRequest &&
-          (
-            isSuperAdmin() ||
-            checkTeam === currentUser.team
-          );
-
-        if (hasAdditionalRequestRow) {
-          totalRowsForDate += 1;
-        }
-      });
-
-      weekMaxTeamRows[weekKey] =
-        Math.max(
-          weekMaxTeamRows[weekKey] || 0,
-          totalRowsForDate
-        );
-    }
 
     for (
       let d = 1;
@@ -1798,10 +1778,24 @@
       `;
 
 
+      const weekStartDay =
+        d -
+        dateObj.getDay() +
+        1;
+
+
+      const weekKey =
+        `${currentYear}-${currentMonth}-${weekStartDay}`;
+
+
       /*
        * ======================================
        * A / B / C / D 조
        * ======================================
+       *
+       * 조별로 먼저 '필요한 행 수'를 확보합니다.
+       * 그래서 B조 신청자가 2명이어도
+       * C조가 B조의 두 번째 행 위치로 밀려나지 않습니다.
        */
 
       TEAMS.forEach(team => {
@@ -1848,8 +1842,6 @@
             : false;
 
 
-        let teamHtml = '';
-
         let suggestedTeam = '';
 
 
@@ -1867,47 +1859,65 @@
         }
 
 
+        const rowsForThisTeam =
+          (
+            weekTeamRows[weekKey] &&
+            weekTeamRows[weekKey][team]
+          ) || 1;
+
+
         /*
-         * ==================================
-         * 이미 휴무 신청이 있는 경우
-         * ==================================
+         * 이 주의 이 조에서 필요한 만큼만 행을 만듭니다.
+         * 실제 신청자가 있는 날짜에는 신청자를 순서대로 넣고,
+         * 나머지 날짜에는 빈 행을 유지합니다.
          */
 
-        if (
-          reqsForTeam.length > 0
+        for (
+          let rowIndex = 0;
+          rowIndex < rowsForThisTeam;
+          rowIndex++
         ) {
 
-          reqsForTeam.forEach(req => {
+          /*
+           * 기존 조 행 자체가 첫 번째 휴무 신청 행입니다.
+           * 따라서 신청자가 있으면 rowIndex 0부터 순서대로 표시하고,
+           * 마지막 1행은 다음 신청을 위한 빈 행으로 남깁니다.
+           */
+          const req =
+            reqsForTeam[rowIndex] ||
+            null;
 
-            let reasonHtml =
+
+          let reqName = '';
+          let reqClick = '';
+          let reqClass =
+            `cell-name ${offRequestClass}`;
+
+
+          let subName = '';
+          let subClick = '';
+          let subCellClass =
+            'cell-name';
+
+
+          /*
+           * 실제 휴무 신청이 있는 행
+           */
+          if (req) {
+
+            const reasonHtml =
               req.reason
                 ? `<span class="reason-text">(${req.reason})</span>`
                 : '';
 
 
-            let reqName = `
+            reqName = `
               <div class="has-data req-data">
                 <span>${req.requested_by}</span>
                 ${reasonHtml}
               </div>
             `;
 
-
-            let reqClick = '';
-
-            let reqClass =
-              `cell-name ${offRequestClass}`;
-
-
-            /*
-             * 휴무 취소
-             *
-             * 일반 사용자:
-             * 본인 신청만
-             *
-             * 슈퍼관리자:
-             * 전체
-             */
 
             if (
               currentUser &&
@@ -1927,351 +1937,155 @@
             }
 
 
-            let subName = '';
-            let subClick = '';
-            let subCellClass = 'cell-name';
-
             if (req.filled_by) {
+
               subName = `
                 <div class="has-data sub-data">
                   <span>${req.filled_by}</span>
                 </div>
               `;
 
+
               if (
                 currentUser &&
                 (
                   req.filled_by === currentUser.name ||
                   isSuperAdmin() ||
-                  (isTeamAdmin() && req.team === currentUser.team)
+                  (
+                    isTeamAdmin() &&
+                    req.team === currentUser.team
+                  )
                 )
               ) {
-                subClick = `onclick="cancelSub('${req.id}')"`;
-                subCellClass += ' clickable';
-              }
-            } else {
-              // 추천 대근 조는 누구나 볼 수 있고, 등록 클릭만 권한으로 제한합니다.
-              if (suggestedTeam) {
-                subName = `<span class="suggest-guide">${suggestedTeam}</span>`;
-                subCellClass += ' suggest-box';
+
+                subClick =
+                  `onclick="cancelSub('${req.id}')"`;
+
+                subCellClass +=
+                  ' clickable';
+
               }
 
-              if (canRegisterSubstitution(team)) {
+            } else {
+
+              if (suggestedTeam) {
+
+                subName =
+                  `<span class="suggest-guide">${suggestedTeam}</span>`;
+
+                subCellClass +=
+                  ' suggest-box';
+
+              }
+
+
+              if (
+                canRegisterSubstitution(team)
+              ) {
+
                 subClick =
                   `onclick="acceptRequest('${req.id}', '${team}', '${dateStr}', '${shift}')"`;
-                subCellClass += ' clickable';
+
+                subCellClass +=
+                  ' clickable';
+
               }
+
             }
-            teamHtml += `
 
-              <div class="team-row ${isMyTeam}">
-
-                <div class="cell-shift ${getShiftClass(shift)}">
-                  ${team}${getShortShift(shift)}
-                </div>
-
-                <div
-                  class="${reqClass}"
-                  ${reqClick}
-                  title="${reqClick ? '클릭 시 삭제' : ''}"
-                >
-                  ${reqName}
-                </div>
-
-                <div
-                  class="${subCellClass}"
-                  ${subClick}
-                  title="클릭 시 대근 등록/취소"
-                >
-                  ${subName}
-                </div>
-
-              </div>
-
-            `;
-
-          });
-
-        }
-
-
-        /*
-         * ==================================
-         * 휴무 신청이 전혀 없는 경우
-         * ==================================
-         */
-
-        if (
-          reqsForTeam.length === 0
-        ) {
-
-          let reqClick = '';
-
-          let reqClass =
-            `cell-name ${offRequestClass}`;
+          }
 
 
           /*
-           * 일반 사용자:
-           * 자기 조
-           *
-           * 슈퍼관리자:
-           * 모든 조
+           * 실제 신청이 없는 빈 행
            */
+          else {
 
-          if (
-            canRequestOff() &&
-            shift !== '휴무' &&
-            (
-              isSuperAdmin() ||
-              team === currentUser.team
-            )
-          ) {
-
-            reqClick =
-              `onclick="requestOff('${dateStr}', '${shift}', '${team}')"`;
-
-            reqClass +=
-              ' clickable';
-
-          }
-
-
-          let subCellClass =
-            'cell-name clickable';
-
-
-          let subClick =
-            `onclick="alert('🚫 이 대근 칸에는 등록 가능한 휴무 신청이 없습니다. 먼저 해당 조의 휴무 신청을 등록해 주세요.');"`;
-
-
-          let suggestGuideHtml = '';
-
-
-          if (
-            shift !== '휴무' &&
-            suggestedTeam
-          ) {
-
-            suggestGuideHtml =
-              `<span class="suggest-guide">${suggestedTeam}</span>`;
-
-            subCellClass +=
-              ' suggest-box';
-
-          }
-
-
-          teamHtml += `
-
-            <div class="team-row ${isMyTeam}">
-
-              <div class="cell-shift ${getShiftClass(shift)}">
-                ${team}${getShortShift(shift)}
-              </div>
-
-              <div
-                class="${reqClass}"
-                ${reqClick}
-                title="${reqClick ? '클릭 시 휴무 신청' : ''}"
-              ></div>
-
-              <div
-                class="${subCellClass}"
-                ${subClick}
-                title="휴무 신청이 없을 때는 대근 등록 불가"
-              >
-                ${suggestGuideHtml}
-              </div>
-
-            </div>
-
-          `;
-
-        }
-
-
-        /*
-         * ==================================
-         * 이미 휴무가 있지만
-         * 내가 아직 신청하지 않은 경우
-         * ==================================
-         */
-
-        else if (
-          canRequestOff() &&
-          shift !== '휴무' &&
-          !hasMyRequest &&
-          (
-            isSuperAdmin() ||
-            team === currentUser.team
-          )
-        ) {
-
-          let reqClick =
-            `onclick="requestOff('${dateStr}', '${shift}', '${team}')"`;
-
-          let reqClass =
-            `cell-name ${offRequestClass} clickable`;
-
-
-          let subCellClass =
-            'cell-name clickable';
-
-
-          let subClick =
-            `onclick="alert('🚫 이 대근 칸에는 등록 가능한 휴무 신청이 없습니다. 먼저 해당 조의 휴무 신청을 등록해 주세요.');"`;
-
-
-          let suggestGuideHtml = '';
-
-
-          if (
-            shift !== '휴무' &&
-            suggestedTeam
-          ) {
-
-            suggestGuideHtml =
-              `<span class="suggest-guide">${suggestedTeam}</span>`;
-
-            subCellClass +=
-              ' suggest-box';
-
-          }
-
-
-          teamHtml += `
-
-            <div class="team-row ${isMyTeam}">
-
-              <div class="cell-shift ${getShiftClass(shift)}">
-                ${team}${getShortShift(shift)}
-              </div>
-
-              <div
-                class="${reqClass}"
-                ${reqClick}
-                title="클릭 시 휴무 신청"
-              ></div>
-
-              <div
-                class="${subCellClass}"
-                ${subClick}
-                title="휴무 신청이 없을 때는 대근 등록 불가"
-              >
-                ${suggestGuideHtml}
-              </div>
-
-            </div>
-
-          `;
-
-        }
-
-
-        dayHtml +=
-          teamHtml;
-
-      });
-
-      /*
-       * ==========================================
-       * 같은 주의 메모 위치 맞추기
-       * ==========================================
-       *
-       * 이 날짜가 속한 주에서 가장 많은 팀 행이 나온 날짜와
-       * 같은 수의 행이 되도록 빈 행을 추가합니다.
-       */
-      const currentWeekDate =
-        new Date(
-          currentYear,
-          currentMonth,
-          d
-        );
-
-      const currentWeekStartDay =
-        d - currentWeekDate.getDay() + 1;
-
-      const currentWeekKey =
-        `${currentYear}-${currentMonth}-${currentWeekStartDay}`;
-
-      const maxTeamRowsThisWeek =
-        weekMaxTeamRows[currentWeekKey] || 0;
-
-      let actualTeamRowsThisDate = 0;
-
-      TEAMS.forEach(team => {
-        const shift =
-          getShiftInfo(
-            team,
-            currentWeekDate
-          );
-
-        const reqsForTeam =
-          requestsData.filter(
-            r =>
-              r.shift_date === dateStr &&
-              r.team === team
-          );
-
-        if (reqsForTeam.length === 0) {
-          actualTeamRowsThisDate += 1;
-          return;
-        }
-
-        actualTeamRowsThisDate +=
-          reqsForTeam.length;
-
-        const hasMyRequest =
-          currentUser
-            ? reqsForTeam.some(
-                r =>
-                  r.requested_by ===
-                  currentUser.name
+            /*
+             * 아직 내 신청이 없다면
+             * 이 빈 행에서 휴무 신청을 추가할 수 있습니다.
+             */
+            if (
+              canRequestOff() &&
+              shift !== '휴무' &&
+              !hasMyRequest &&
+              (
+                isSuperAdmin() ||
+                team === currentUser.team
               )
-            : false;
+            ) {
 
-        const hasAdditionalRequestRow =
-          canRequestOff() &&
-          shift !== '휴무' &&
-          !hasMyRequest &&
-          (
-            isSuperAdmin() ||
-            team === currentUser.team
-          );
+              reqClick =
+                `onclick="requestOff('${dateStr}', '${shift}', '${team}')"`;
 
-        if (hasAdditionalRequestRow) {
-          actualTeamRowsThisDate += 1;
+              reqClass +=
+                ' clickable';
+
+            }
+
+
+            let suggestGuideHtml = '';
+
+
+            if (
+              shift !== '휴무' &&
+              suggestedTeam
+            ) {
+
+              suggestGuideHtml =
+                `<span class="suggest-guide">${suggestedTeam}</span>`;
+
+              subCellClass +=
+                ' suggest-box';
+
+            }
+
+
+            /*
+             * 빈 행의 대근 칸:
+             * 해당 날짜/조에 실제 휴무 신청이 없으므로
+             * 대근 등록은 불가합니다.
+             */
+            subClick =
+              `onclick="alert('🚫 이 대근 칸에는 등록 가능한 휴무 신청이 없습니다. 먼저 해당 조의 휴무 신청을 등록해 주세요.');"`;
+
+            subName =
+              suggestGuideHtml;
+
+          }
+
+
+          dayHtml += `
+
+            <div class="team-row ${isMyTeam}">
+
+              <div class="cell-shift ${getShiftClass(shift)}">
+                ${team}${getShortShift(shift)}
+              </div>
+
+              <div
+                class="${reqClass}"
+                ${reqClick}
+                title="${reqClick ? '클릭 시 휴무 신청/삭제' : ''}"
+              >
+                ${reqName}
+              </div>
+
+              <div
+                class="${subCellClass}"
+                ${subClick}
+                title="클릭 시 대근 등록/취소"
+              >
+                ${subName}
+              </div>
+
+            </div>
+
+          `;
+
         }
+
       });
-
-      const emptyRowsNeeded =
-        Math.max(
-          0,
-          maxTeamRowsThisWeek -
-          actualTeamRowsThisDate
-        );
-
-      for (
-        let emptyIndex = 0;
-        emptyIndex < emptyRowsNeeded;
-        emptyIndex++
-      ) {
-        dayHtml += `
-          <div
-            class="team-row"
-            style="
-              visibility: hidden;
-              pointer-events: none;
-            "
-            aria-hidden="true"
-          >
-            <div class="cell-shift"></div>
-            <div class="cell-name"></div>
-            <div class="cell-name"></div>
-          </div>
-        `;
-      }
 
 
       /*
@@ -2341,7 +2155,6 @@
     }
 
   }
-
 
   /*
    * ==========================================
@@ -3224,6 +3037,17 @@
       }
     );
 
+</script>
+
+<script>
+  // PWA 서비스 워커 등록
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js')
+        .then(() => console.log('PWA 서비스 워커 등록 완료'))
+        .catch(error => console.warn('PWA 서비스 워커 등록 실패:', error));
+    });
+  }
 </script>
 
 </body>
