@@ -276,13 +276,23 @@
           환영합니다!
         </h2>
 
-        <button
-          onclick="logout()"
-          class="btn-small"
-          style="background-color: #6c757d;"
-        >
-          로그아웃
-        </button>
+        <div style="display: flex; gap: 6px;">
+          <button
+            onclick="changePersonalCode()"
+            class="btn-small"
+            style="background-color: #17a2b8;"
+          >
+            접속 코드 변경
+          </button>
+
+          <button
+            onclick="logout()"
+            class="btn-small"
+            style="background-color: #6c757d;"
+          >
+            로그아웃
+          </button>
+        </div>
 
       </div>
 
@@ -459,6 +469,9 @@
    */
 
   let currentUser = null;
+
+  // 로그인에 성공한 현재 코드입니다. 로그아웃 시 메모리에서 지웁니다.
+  let currentLoginCode = '';
 
   let currentYear =
     new Date().getFullYear();
@@ -870,6 +883,8 @@
 
     };
 
+    currentLoginCode = code;
+
 
     document
       .getElementById('loginScreen')
@@ -922,6 +937,8 @@
 
     currentUser = null;
 
+    currentLoginCode = '';
+
     document
       .getElementById('loginCode')
       .value = '';
@@ -933,6 +950,134 @@
     document
       .getElementById('loginScreen')
       .style.display = 'block';
+
+  }
+
+
+  /*
+   * ==========================================
+   * 내 접속 코드 변경
+   * ==========================================
+   */
+
+  async function changePersonalCode() {
+
+    if (!currentUser || !currentLoginCode) {
+
+      alert(
+        "로그인 후 이용해 주세요."
+      );
+
+      return;
+
+    }
+
+
+    const newCode =
+      prompt(
+        "새 접속 코드를 입력하세요.\n" +
+        "(6~50자, 현재 코드와 다른 값)"
+      );
+
+
+    if (newCode === null) {
+      return;
+    }
+
+
+    const trimmedNewCode =
+      newCode.trim();
+
+
+    if (
+      trimmedNewCode.length < 6 ||
+      trimmedNewCode.length > 50
+    ) {
+
+      alert(
+        "새 접속 코드는 6~50자로 입력해 주세요."
+      );
+
+      return;
+
+    }
+
+
+    const confirmCode =
+      prompt(
+        "새 접속 코드를 다시 입력하세요."
+      );
+
+
+    if (confirmCode === null) {
+      return;
+    }
+
+
+    if (
+      trimmedNewCode !==
+      confirmCode.trim()
+    ) {
+
+      alert(
+        "새 접속 코드가 서로 일치하지 않습니다."
+      );
+
+      return;
+
+    }
+
+
+    const {
+      data,
+      error
+    } =
+      await supabaseClient
+        .functions
+        .invoke(
+          'change-login-code',
+          {
+            body: {
+              currentCode:
+                currentLoginCode,
+
+              newCode:
+                trimmedNewCode
+            }
+          }
+        );
+
+
+    if (error) {
+
+      alert(
+        "코드 변경에 실패했습니다. 잠시 후 다시 시도해 주세요."
+      );
+
+      return;
+
+    }
+
+
+    if (!data || !data.success) {
+
+      alert(
+        data?.message ||
+        "코드 변경에 실패했습니다."
+      );
+
+      return;
+
+    }
+
+
+    alert(
+      "접속 코드가 변경되었습니다.\n" +
+      "새 코드로 다시 로그인해 주세요."
+    );
+
+
+    logout();
 
   }
 
