@@ -472,6 +472,37 @@
 
 
   /*
+   * 공공데이터포털에 아직 공식 일정이 없는 먼 미래 연도용 예비 음력 날짜입니다.
+   * 공식 API 자료가 있으면 그 자료를 먼저 사용합니다.
+   */
+  const PLANNED_LUNAR_DATES = {
+    2028: { newYear: '2028-01-27', buddha: '2028-05-02', chuseok: '2028-10-03' },
+    2029: { newYear: '2029-02-13', buddha: '2029-05-20', chuseok: '2029-09-22' },
+    2030: { newYear: '2030-02-03', buddha: '2030-05-09', chuseok: '2030-09-12' },
+    2031: { newYear: '2031-01-23', buddha: '2031-05-28', chuseok: '2031-10-01' },
+    2032: { newYear: '2032-02-11', buddha: '2032-05-16', chuseok: '2032-09-19' },
+    2033: { newYear: '2033-01-31', buddha: '2033-05-06', chuseok: '2033-09-08' },
+    2034: { newYear: '2034-02-19', buddha: '2034-05-25', chuseok: '2034-09-27' },
+    2035: { newYear: '2035-02-08', buddha: '2035-05-15', chuseok: '2035-09-16' },
+    2036: { newYear: '2036-01-28', buddha: '2036-05-03', chuseok: '2036-10-04' },
+    2037: { newYear: '2037-02-15', buddha: '2037-05-22', chuseok: '2037-09-24' },
+    2038: { newYear: '2038-02-04', buddha: '2038-05-11', chuseok: '2038-09-13' },
+    2039: { newYear: '2039-01-24', buddha: '2039-04-30', chuseok: '2039-10-02' },
+    2040: { newYear: '2040-02-12', buddha: '2040-05-18', chuseok: '2040-09-21' },
+    2041: { newYear: '2041-02-01', buddha: '2041-05-07', chuseok: '2041-09-10' },
+    2042: { newYear: '2042-01-22', buddha: '2042-05-26', chuseok: '2042-09-28' },
+    2043: { newYear: '2043-02-10', buddha: '2043-05-16', chuseok: '2043-09-17' },
+    2044: { newYear: '2044-01-30', buddha: '2044-05-05', chuseok: '2044-10-05' },
+    2045: { newYear: '2045-02-17', buddha: '2045-05-24', chuseok: '2045-09-25' },
+    2046: { newYear: '2046-02-06', buddha: '2046-05-13', chuseok: '2046-09-15' },
+    2047: { newYear: '2047-01-26', buddha: '2047-05-02', chuseok: '2047-10-04' },
+    2048: { newYear: '2048-02-14', buddha: '2048-05-20', chuseok: '2048-09-22' },
+    2049: { newYear: '2049-02-02', buddha: '2049-05-09', chuseok: '2049-09-11' },
+    2050: { newYear: '2050-01-23', buddha: '2050-05-28', chuseok: '2050-09-30' }
+  };
+
+
+  /*
    * ==========================================
    * 전역 변수
    * ==========================================
@@ -1262,6 +1293,176 @@
    * ==========================================
    */
 
+  function plusDays(dateStr, days) {
+
+    const date = new Date(`${dateStr}T00:00:00Z`);
+
+    date.setUTCDate(
+      date.getUTCDate() + days
+    );
+
+    return date
+      .toISOString()
+      .slice(0, 10);
+
+  }
+
+
+  function getUtcDay(dateStr) {
+
+    return new Date(
+      `${dateStr}T00:00:00Z`
+    ).getUTCDay();
+
+  }
+
+
+  function addPlannedHolidays(year) {
+
+    const holidays = [];
+
+    const addHoliday = (date, name, canSubstitute) => {
+
+      holidays.push({
+        date,
+        name,
+        canSubstitute
+      });
+
+    };
+
+
+    [
+      ['01-01', '신정', false],
+      ['03-01', '3·1절', true],
+      ['05-05', '어린이날', true],
+      ['06-06', '현충일', false],
+      ['08-15', '광복절', true],
+      ['10-03', '개천절', true],
+      ['10-09', '한글날', true],
+      ['12-25', '성탄절', true]
+    ].forEach(([monthDay, name, canSubstitute]) => {
+
+      addHoliday(
+        `${year}-${monthDay}`,
+        name,
+        canSubstitute
+      );
+
+    });
+
+
+    const lunar =
+      PLANNED_LUNAR_DATES[year];
+
+
+    if (lunar) {
+
+      [-1, 0, 1].forEach(offset => {
+
+        const date = plusDays(
+          lunar.newYear,
+          offset
+        );
+
+        addHoliday(
+          date,
+          offset === 0 ? '설날' : '설연휴',
+          true
+        );
+
+      });
+
+
+      addHoliday(
+        lunar.buddha,
+        '부처님오신날',
+        true
+      );
+
+
+      [-1, 0, 1].forEach(offset => {
+
+        const date = plusDays(
+          lunar.chuseok,
+          offset
+        );
+
+        addHoliday(
+          date,
+          offset === 0 ? '추석' : '추석연휴',
+          true
+        );
+
+      });
+
+    }
+
+
+    const dates = new Set(
+      holidays.map(holiday => holiday.date)
+    );
+
+    const duplicateDates =
+      holidays.reduce((counts, holiday) => {
+
+        counts[holiday.date] =
+          (counts[holiday.date] || 0) + 1;
+
+        return counts;
+
+      }, {});
+
+
+    holidays.forEach(holiday => {
+
+      HOLIDAYS[holiday.date] =
+        HOLIDAYS[holiday.date] ||
+        holiday.name;
+
+    });
+
+
+    holidays
+      .filter(holiday => holiday.canSubstitute)
+      .forEach(holiday => {
+
+        if (
+          getUtcDay(holiday.date) !== 0 &&
+          duplicateDates[holiday.date] < 2
+        ) {
+
+          return;
+
+        }
+
+
+        let substituteDate =
+          plusDays(holiday.date, 1);
+
+
+        while (
+          dates.has(substituteDate) ||
+          getUtcDay(substituteDate) === 0
+        ) {
+
+          substituteDate = plusDays(
+            substituteDate,
+            1
+          );
+
+        }
+
+
+        dates.add(substituteDate);
+
+        HOLIDAYS[substituteDate] =
+          '대체공휴일';
+
+      });
+
+  }
+
   async function loadHolidaysForYear(year) {
 
     if (
@@ -1290,35 +1491,38 @@
 
 
     if (
-      error ||
-      !data ||
-      !data.success ||
-      !Array.isArray(data.holidays)
+      !error &&
+      data &&
+      data.success &&
+      Array.isArray(data.holidays) &&
+      data.holidays.length > 0
     ) {
 
+      data.holidays.forEach(holiday => {
+
+        if (
+          holiday.date &&
+          holiday.name
+        ) {
+
+          HOLIDAYS[holiday.date] =
+            holiday.name;
+
+        }
+
+      });
+
+    } else {
+
+      // API가 아직 공개하지 않은 미래 연도도 달력에서 비지 않도록 표시합니다.
+      addPlannedHolidays(year);
+
       console.warn(
-        '공휴일 자동 불러오기에 실패했습니다.',
+        '공식 공휴일 자료가 없어 예비 일정을 표시했습니다.',
         error || data
       );
 
-      return;
-
     }
-
-
-    data.holidays.forEach(holiday => {
-
-      if (
-        holiday.date &&
-        holiday.name
-      ) {
-
-        HOLIDAYS[holiday.date] =
-          holiday.name;
-
-      }
-
-    });
 
 
     loadedHolidayYears.add(year);
