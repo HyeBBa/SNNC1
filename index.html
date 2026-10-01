@@ -413,7 +413,8 @@
    * ==========================================
    */
 
-  const HOLIDAYS = {
+  // API를 불러오지 못한 경우에도 2026~2027년 공휴일은 표시됩니다.
+  let HOLIDAYS = {
 
     "2026-01-01": "신정",
 
@@ -482,6 +483,9 @@
   let requestsData = [];
 
   let memosData = [];
+
+  // 공공데이터포털에서 정상적으로 불러온 연도를 저장합니다.
+  const loadedHolidayYears = new Set();
 
 
   /*
@@ -1122,6 +1126,10 @@
 
   async function loadData() {
 
+    await loadHolidaysForYear(
+      currentYear
+    );
+
     const [
       reqRes,
       memoRes
@@ -1166,6 +1174,76 @@
 
 
     renderCalendar();
+
+  }
+
+
+  /*
+   * ==========================================
+   * 공휴일 자동 불러오기
+   * ==========================================
+   */
+
+  async function loadHolidaysForYear(year) {
+
+    if (
+      loadedHolidayYears.has(year)
+    ) {
+
+      return;
+
+    }
+
+
+    const {
+      data,
+      error
+    } =
+      await supabaseClient
+        .functions
+        .invoke(
+          'get-holidays',
+          {
+            body: {
+              year: year
+            }
+          }
+        );
+
+
+    if (
+      error ||
+      !data ||
+      !data.success ||
+      !Array.isArray(data.holidays)
+    ) {
+
+      console.warn(
+        '공휴일 자동 불러오기에 실패했습니다.',
+        error || data
+      );
+
+      return;
+
+    }
+
+
+    data.holidays.forEach(holiday => {
+
+      if (
+        holiday.date &&
+        holiday.name
+      ) {
+
+        HOLIDAYS[holiday.date] =
+          holiday.name;
+
+      }
+
+    });
+
+
+    loadedHolidayYears.add(year);
 
   }
 
