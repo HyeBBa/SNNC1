@@ -6,13 +6,6 @@
   <title>SNNC 환원반 휴무계획표</title>
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
-  <link rel="manifest" href="./manifest.json">
-  <meta name="theme-color" content="#007bff">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="apple-touch-icon" href="./icons/icon-192.png">
-
   <style>
     body {
       font-family: 'Malgun Gothic', sans-serif;
@@ -1592,19 +1585,82 @@
     }
 
 
-    // 현재 월에서 휴무 신청이 가장 많은 날짜를 기준으로
-    // 모든 날짜의 높이를 동일하게 맞춥니다.
-    const maxOffRequestRows = Math.max(
-      0,
-      ...Array.from({ length: lastDate }, (_, index) => {
-        const checkDate =
-          `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(index + 1).padStart(2, '0')}`;
+    /*
+     * ==========================================
+     * 월 전체 행 높이 통일
+     * ==========================================
+     *
+     * 한 날짜/조에 휴무 신청이 생기면 기존 구조에서는
+     * 그 조만 신청자 수만큼 행이 늘어납니다.
+     *
+     * 이 때문에 같은 주의 다른 날짜와 높이가 달라졌습니다.
+     * 현재 월에서 가장 많은 휴무 신청이 들어간 조를 기준으로
+     * 모든 날짜의 모든 조가 같은 행 수를 갖도록 맞춥니다.
+     *
+     * 신청이 N건 있는 조는 N건 + 빈 신청행 1개를 기준으로 합니다.
+     * 신청이 없는 조는 기본 1행입니다.
+     */
+    let maxRowsPerTeamInMonth = 1;
 
-        return requestsData.filter(
-          r => r.shift_date === checkDate
+    for (
+      let checkDay = 1;
+      checkDay <= lastDate;
+      checkDay++
+    ) {
+      const checkDateStr =
+        `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(checkDay).padStart(2, '0')}`;
+
+      TEAMS.forEach(checkTeam => {
+        const requestCount =
+          requestsData.filter(
+            r =>
+              r.shift_date === checkDateStr &&
+              r.team === checkTeam
+          ).length;
+
+        const rowsForThisTeam =
+          requestCount > 0
+            ? requestCount + 1
+            : 1;
+
+        maxRowsPerTeamInMonth =
+          Math.max(
+            maxRowsPerTeamInMonth,
+            rowsForThisTeam
+          );
+      });
+    }
+
+
+    /*
+     * 주별 최대 휴무 신청 행 수를 계산합니다.
+     */
+    const weekMaxOffRows = {};
+
+    for (let checkDay = 1; checkDay <= lastDate; checkDay++) {
+      const checkDateStr =
+        `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(checkDay).padStart(2, '0')}`;
+
+      const checkDate =
+        new Date(currentYear, currentMonth, checkDay);
+
+      const weekStartDay =
+        checkDay - checkDate.getDay() + 1;
+
+      const weekKey =
+        `${currentYear}-${currentMonth}-${weekStartDay}`;
+
+      const requestCount =
+        requestsData.filter(
+          r => r.shift_date === checkDateStr
         ).length;
-      })
-    );
+
+      weekMaxOffRows[weekKey] =
+        Math.max(
+          weekMaxOffRows[weekKey] || 0,
+          requestCount
+        );
+    }
 
     for (
       let d = 1;
@@ -2068,20 +2124,39 @@
           `;
 
         }
+
+
         dayHtml +=
           teamHtml;
 
-        // 실제 휴무 신청 행이 적은 날짜에는 빈 행을 추가합니다.
-        // 따라서 해당 월의 모든 날짜가 동일한 높이를 유지합니다.
-        const offRequestCountForDate =
-          requestsData.filter(
-            r => r.shift_date === dateStr
-          ).length;
+        /*
+         * 이 조의 실제 행 수가 월 전체 기준보다 적으면
+         * 부족한 만큼 빈 행을 추가합니다.
+         *
+         * 기존의 "휴무 신청 후 추가 빈 행"과 같은 구조를 사용해
+         * 모든 날짜/조의 높이를 동일하게 유지합니다.
+         */
+        const rowsAlreadyRendered =
+          reqsForTeam.length > 0
+            ? reqsForTeam.length +
+              (
+                canRequestOff() &&
+                shift !== '휴무' &&
+                !hasMyRequest &&
+                (
+                  isSuperAdmin() ||
+                  team === currentUser.team
+                )
+                  ? 1
+                  : 0
+              )
+            : 1;
 
         const emptyRowsNeeded =
           Math.max(
             0,
-            maxOffRequestRows - offRequestCountForDate
+            maxRowsPerTeamInMonth -
+            rowsAlreadyRendered
           );
 
         for (
@@ -2090,21 +2165,75 @@
           emptyIndex++
         ) {
           dayHtml += `
-            <div
-              class="team-row"
-              style="
-                visibility: hidden;
-                pointer-events: none;
-              "
-              aria-hidden="true"
-            >
-              <div class="cell-shift">휴</div>
-              <div class="cell-name"></div>
-              <div class="cell-name"></div>
+            <div class="team-row ${isMyTeam}">
+              <div class="cell-shift ${getShiftClass(shift)}">
+                ${team}${getShortShift(shift)}
+              </div>
+
+              <div class="cell-name ${offRequestClass}">
+              </div>
+
+              <div class="cell-name">
+              </div>
             </div>
           `;
         }
+
       });
+
+      /*
+       * 주별 휴무 신청 수에 맞춰 빈 행을 추가합니다.
+       * 신청이 있는 주만 높이가 늘어나고,
+       * 같은 주의 모든 날짜는 같은 높이를 유지합니다.
+       */
+      const currentWeekDate =
+        new Date(
+          currentYear,
+          currentMonth,
+          d
+        );
+
+      const currentWeekStartDay =
+        d - currentWeekDate.getDay() + 1;
+
+      const currentWeekKey =
+        `${currentYear}-${currentMonth}-${currentWeekStartDay}`;
+
+      const maxRowsThisWeek =
+        weekMaxOffRows[currentWeekKey] || 0;
+
+      const actualRowsThisDate =
+        requestsData.filter(
+          r => r.shift_date === dateStr
+        ).length;
+
+      const emptyRowsNeeded =
+        Math.max(
+          0,
+          maxRowsThisWeek - actualRowsThisDate
+        );
+
+      for (
+        let emptyIndex = 0;
+        emptyIndex < emptyRowsNeeded;
+        emptyIndex++
+      ) {
+        dayHtml += `
+          <div
+            class="team-row"
+            style="
+              visibility: hidden;
+              pointer-events: none;
+            "
+            aria-hidden="true"
+          >
+            <div class="cell-shift">휴</div>
+            <div class="cell-name"></div>
+            <div class="cell-name"></div>
+          </div>
+        `;
+      }
+
 
       /*
        * ==================================
@@ -3056,17 +3185,6 @@
       }
     );
 
-</script>
-
-<script>
-  // PWA 서비스 워커 등록
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./service-worker.js')
-        .then(() => console.log('PWA 서비스 워커 등록 완료'))
-        .catch(error => console.warn('PWA 서비스 워커 등록 실패:', error));
-    });
-  }
 </script>
 
 </body>
