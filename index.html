@@ -1600,49 +1600,30 @@
      * 신청이 N건 있는 조는 N건 + 빈 신청행 1개를 기준으로 합니다.
      * 신청이 없는 조는 기본 1행입니다.
      */
-    let maxRowsPerTeamInMonth = 1;
-
-    for (
-      let checkDay = 1;
-      checkDay <= lastDate;
-      checkDay++
-    ) {
-      const checkDateStr =
-        `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(checkDay).padStart(2, '0')}`;
-
-      TEAMS.forEach(checkTeam => {
-        const requestCount =
-          requestsData.filter(
-            r =>
-              r.shift_date === checkDateStr &&
-              r.team === checkTeam
-          ).length;
-
-        const rowsForThisTeam =
-          requestCount > 0
-            ? requestCount + 1
-            : 1;
-
-        maxRowsPerTeamInMonth =
-          Math.max(
-            maxRowsPerTeamInMonth,
-            rowsForThisTeam
-          );
-      });
-    }
-
-
     /*
-     * 주별 최대 휴무 신청 행 수를 계산합니다.
+     * ==========================================
+     * 주별 최대 전체 행 수 계산
+     * ==========================================
+     *
+     * 메모 행이 정확히 같은 위치에 오도록,
+     * 각 날짜에서 실제로 렌더링되는 A/B/C/D조 전체 행 수를
+     * 먼저 계산합니다.
+     *
+     * 같은 주에서는 가장 많은 행을 가진 날짜를 기준으로
+     * 나머지 날짜에 빈 행을 추가합니다.
      */
-    const weekMaxOffRows = {};
+    const weekMaxTeamRows = {};
 
     for (let checkDay = 1; checkDay <= lastDate; checkDay++) {
+      const checkDate =
+        new Date(
+          currentYear,
+          currentMonth,
+          checkDay
+        );
+
       const checkDateStr =
         `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(checkDay).padStart(2, '0')}`;
-
-      const checkDate =
-        new Date(currentYear, currentMonth, checkDay);
 
       const weekStartDay =
         checkDay - checkDate.getDay() + 1;
@@ -1650,15 +1631,60 @@
       const weekKey =
         `${currentYear}-${currentMonth}-${weekStartDay}`;
 
-      const requestCount =
-        requestsData.filter(
-          r => r.shift_date === checkDateStr
-        ).length;
+      let totalRowsForDate = 0;
 
-      weekMaxOffRows[weekKey] =
+      TEAMS.forEach(checkTeam => {
+        const checkShift =
+          getShiftInfo(
+            checkTeam,
+            checkDate
+          );
+
+        const checkRequests =
+          requestsData.filter(
+            r =>
+              r.shift_date === checkDateStr &&
+              r.team === checkTeam
+          );
+
+        if (checkRequests.length === 0) {
+          // 휴무 신청이 없으면 기본 1행
+          totalRowsForDate += 1;
+          return;
+        }
+
+        // 신청자 수만큼 실제 신청 행이 생김
+        totalRowsForDate += checkRequests.length;
+
+        const checkHasMyRequest =
+          currentUser
+            ? checkRequests.some(
+                r =>
+                  r.requested_by ===
+                  currentUser.name
+              )
+            : false;
+
+        // 기존 코드에서 '내가 아직 신청하지 않은 경우'에
+        // 추가 신청용 빈 행 1개가 생기는 조건을 그대로 반영
+        const hasAdditionalRequestRow =
+          canRequestOff() &&
+          checkShift !== '휴무' &&
+          !checkHasMyRequest &&
+          (
+            isSuperAdmin() ||
+            checkTeam === currentUser.team
+          );
+
+        if (hasAdditionalRequestRow) {
+          totalRowsForDate += 1;
+        }
+      });
+
+      weekMaxTeamRows[weekKey] =
         Math.max(
-          weekMaxOffRows[weekKey] || 0,
-          requestCount
+          weekMaxTeamRows[weekKey] || 0,
+          totalRowsForDate
         );
     }
 
@@ -2129,62 +2155,15 @@
         dayHtml +=
           teamHtml;
 
-        /*
-         * 이 조의 실제 행 수가 월 전체 기준보다 적으면
-         * 부족한 만큼 빈 행을 추가합니다.
-         *
-         * 기존의 "휴무 신청 후 추가 빈 행"과 같은 구조를 사용해
-         * 모든 날짜/조의 높이를 동일하게 유지합니다.
-         */
-        const rowsAlreadyRendered =
-          reqsForTeam.length > 0
-            ? reqsForTeam.length +
-              (
-                canRequestOff() &&
-                shift !== '휴무' &&
-                !hasMyRequest &&
-                (
-                  isSuperAdmin() ||
-                  team === currentUser.team
-                )
-                  ? 1
-                  : 0
-              )
-            : 1;
-
-        const emptyRowsNeeded =
-          Math.max(
-            0,
-            maxRowsPerTeamInMonth -
-            rowsAlreadyRendered
-          );
-
-        for (
-          let emptyIndex = 0;
-          emptyIndex < emptyRowsNeeded;
-          emptyIndex++
-        ) {
-          dayHtml += `
-            <div class="team-row ${isMyTeam}">
-              <div class="cell-shift ${getShiftClass(shift)}">
-                ${team}${getShortShift(shift)}
-              </div>
-
-              <div class="cell-name ${offRequestClass}">
-              </div>
-
-              <div class="cell-name">
-              </div>
-            </div>
-          `;
-        }
-
       });
 
       /*
-       * 주별 휴무 신청 수에 맞춰 빈 행을 추가합니다.
-       * 신청이 있는 주만 높이가 늘어나고,
-       * 같은 주의 모든 날짜는 같은 높이를 유지합니다.
+       * ==========================================
+       * 같은 주의 메모 위치 맞추기
+       * ==========================================
+       *
+       * 이 날짜가 속한 주에서 가장 많은 팀 행이 나온 날짜와
+       * 같은 수의 행이 되도록 빈 행을 추가합니다.
        */
       const currentWeekDate =
         new Date(
@@ -2199,18 +2178,61 @@
       const currentWeekKey =
         `${currentYear}-${currentMonth}-${currentWeekStartDay}`;
 
-      const maxRowsThisWeek =
-        weekMaxOffRows[currentWeekKey] || 0;
+      const maxTeamRowsThisWeek =
+        weekMaxTeamRows[currentWeekKey] || 0;
 
-      const actualRowsThisDate =
-        requestsData.filter(
-          r => r.shift_date === dateStr
-        ).length;
+      let actualTeamRowsThisDate = 0;
+
+      TEAMS.forEach(team => {
+        const shift =
+          getShiftInfo(
+            team,
+            currentWeekDate
+          );
+
+        const reqsForTeam =
+          requestsData.filter(
+            r =>
+              r.shift_date === dateStr &&
+              r.team === team
+          );
+
+        if (reqsForTeam.length === 0) {
+          actualTeamRowsThisDate += 1;
+          return;
+        }
+
+        actualTeamRowsThisDate +=
+          reqsForTeam.length;
+
+        const hasMyRequest =
+          currentUser
+            ? reqsForTeam.some(
+                r =>
+                  r.requested_by ===
+                  currentUser.name
+              )
+            : false;
+
+        const hasAdditionalRequestRow =
+          canRequestOff() &&
+          shift !== '휴무' &&
+          !hasMyRequest &&
+          (
+            isSuperAdmin() ||
+            team === currentUser.team
+          );
+
+        if (hasAdditionalRequestRow) {
+          actualTeamRowsThisDate += 1;
+        }
+      });
 
       const emptyRowsNeeded =
         Math.max(
           0,
-          maxRowsThisWeek - actualRowsThisDate
+          maxTeamRowsThisWeek -
+          actualTeamRowsThisDate
         );
 
       for (
@@ -2227,7 +2249,7 @@
             "
             aria-hidden="true"
           >
-            <div class="cell-shift">휴</div>
+            <div class="cell-shift"></div>
             <div class="cell-name"></div>
             <div class="cell-name"></div>
           </div>
