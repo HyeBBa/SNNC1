@@ -88,6 +88,10 @@
       border-bottom: 1px solid #ccc;
       display: flex;
       flex-direction: column;
+
+      /* CSS Grid가 정한 해당 주의 높이까지 날짜 칸을 채웁니다. */
+      height: 100%;
+      box-sizing: border-box;
     }
 
     .day-header-bar {
@@ -137,6 +141,13 @@
       border-top: 1px solid #ccc;
       background-color: #fff9c4;
       border-bottom: none;
+
+      /*
+       * 같은 주의 날짜 칸 높이가 서로 다르더라도
+       * 메모를 날짜 칸의 맨 아래로 밀어
+       * 모든 날짜의 메모 시작선을 일치시킵니다.
+       */
+      margin-top: auto;
     }
 
     .my-team-row {
