@@ -1145,25 +1145,70 @@
    * ==========================================
    * 로그아웃
    * ==========================================
+   *
+   * 공용 PC에서 A가 알림을 설정한 뒤 로그아웃하고
+   * B가 로그인하는 경우, A의 Push Subscription이
+   * 공용 PC에 남아 있으면 A에게 계속 알림이 갈 수 있습니다.
+   *
+   * 따라서 로그아웃할 때
+   * 1) 현재 사용자의 push_subscriptions 행을 삭제하고
+   * 2) 현재 브라우저의 Push Subscription도 해제합니다.
+   *
+   * ※ 브라우저의 알림 권한 자체는 취소하지 않습니다.
+   *   다음 사용자가 로그인 후 '알림 설정'을 누르면 다시 등록됩니다.
    */
 
-  function logout() {
+  async function logout() {
 
-    currentUser = null;
+    const userId = currentUser?.id;
 
-    currentLoginCode = '';
+    try {
 
-    document
-      .getElementById('loginCode')
-      .value = '';
+      if (userId) {
+        const { error } = await supabaseClient
+          .from('push_subscriptions')
+          .delete()
+          .eq('user_id', userId);
 
-    document
-      .getElementById('mainScreen')
-      .style.display = 'none';
+        if (error) {
+          console.error('로그아웃 시 푸시 구독 삭제 실패:', error);
+        }
+      }
 
-    document
-      .getElementById('loginScreen')
-      .style.display = 'block';
+      if ('serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          const subscription = await registration.pushManager.getSubscription();
+
+          if (subscription) {
+            await subscription.unsubscribe();
+          }
+        } catch (pushError) {
+          console.error('브라우저 Push Subscription 해제 실패:', pushError);
+        }
+      }
+
+    } catch (error) {
+      console.error('로그아웃 처리 중 오류:', error);
+    } finally {
+
+      currentUser = null;
+      currentLoginCode = '';
+
+      document
+        .getElementById('loginCode')
+        .value = '';
+
+      document
+        .getElementById('mainScreen')
+        .style.display = 'none';
+
+      document
+        .getElementById('loginScreen')
+        .style.display = 'block';
+
+      updateNotificationButton();
+    }
 
   }
 
@@ -1292,7 +1337,7 @@
     );
 
 
-    logout();
+    await logout();
 
   }
 
