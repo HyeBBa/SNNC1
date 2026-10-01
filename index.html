@@ -317,7 +317,15 @@
         </button>
 
         <h3 id="currentMonthStr"
-            style="margin: 0; font-size: 18px;">
+            onclick="goToMonth()"
+            title="클릭하여 원하는 년월로 이동"
+            style="
+              margin: 0;
+              font-size: 18px;
+              cursor: pointer;
+              text-decoration: underline;
+              text-underline-offset: 4px;
+            ">
           2026년 9월
         </h3>
 
@@ -1112,6 +1120,76 @@
 
     }
 
+
+    loadData();
+
+  }
+
+
+  /*
+   * ==========================================
+   * 원하는 년월로 이동
+   * ==========================================
+   */
+
+  function goToMonth() {
+
+    const selectedMonth =
+      prompt(
+        "이동할 년월을 입력하세요.\n" +
+        "예: 2028-03",
+        `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`
+      );
+
+
+    if (selectedMonth === null) {
+      return;
+    }
+
+
+    const match =
+      selectedMonth
+        .trim()
+        .match(
+          /^(\d{4})\s*[-./년]\s*(\d{1,2})\s*월?$/
+        );
+
+
+    if (!match) {
+
+      alert(
+        "년월 형식을 확인해 주세요.\n" +
+        "예: 2028-03"
+      );
+
+      return;
+
+    }
+
+
+    const year =
+      Number(match[1]);
+
+    const month =
+      Number(match[2]);
+
+
+    if (
+      month < 1 ||
+      month > 12
+    ) {
+
+      alert(
+        "월은 1~12 사이로 입력해 주세요."
+      );
+
+      return;
+
+    }
+
+
+    currentYear = year;
+    currentMonth = month - 1;
 
     loadData();
 
