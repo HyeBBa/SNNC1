@@ -951,31 +951,36 @@
 
 
     const {
-      data,
+      data: loginRows,
       error
     } =
       await supabaseClient
-        .from('app_users')
-        .select(
-          'id, name, team, role, is_active'
-        )
-        .eq(
-          'login_code',
-          code
-        )
-        .maybeSingle();
+        .rpc(
+          'login_by_code',
+          {
+            p_login_code: code
+          }
+        );
 
 
     if (error) {
 
+      console.error('로그인 함수 오류:', error);
+
       alert(
-        "로그인 조회 실패: " +
-        error.message
+        "로그인에 실패했습니다. 잠시 후 다시 시도해 주세요."
       );
 
       return;
 
     }
+
+
+    const data =
+      Array.isArray(loginRows) &&
+      loginRows.length > 0
+        ? loginRows[0]
+        : null;
 
 
     if (!data) {
