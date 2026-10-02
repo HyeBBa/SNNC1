@@ -1178,10 +1178,10 @@
         });
 
       if (saveError) {
-        console.error('푸시 구독 저장 실패:', error);
+        console.error('푸시 구독 저장 실패:', saveError);
         alert(
           '알림 구독 저장에 실패했습니다.\n\n' +
-          error.message
+          saveError.message
         );
         return;
       }
