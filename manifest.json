@@ -1,6 +1,6 @@
 {
-  "name": "영차 영차",
-  "short_name": "영차 영차",
+  "name": "교대 근무",
+  "short_name": "교대 근무",
   "description": "일꾼 근태 관리",
   "start_url": "./index.html",
   "display": "standalone",
