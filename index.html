@@ -2144,16 +2144,6 @@
           );
 
 
-        const hasMyRequest =
-          currentUser
-            ? reqsForTeam.some(
-                r =>
-                  r.requested_by ===
-                  currentUser.name
-              )
-            : false;
-
-
         let suggestedTeam = '';
 
 
@@ -2218,14 +2208,14 @@
           if (req) {
 
             const reasonHtml =
-              req.reason
-                ? `<span class="reason-text">(${req.reason})</span>`
+              req.request_kind !== 'support' && req.reason
+                ? `<span class="reason-text">(${escapeRequestText(req.reason)})</span>`
                 : '';
 
 
             reqName = `
               <div class="has-data req-data">
-                <span>${req.requested_by}</span>
+                <span>${escapeRequestText(requestDisplayName(req))}</span>
                 ${reasonHtml}
               </div>
             `;
@@ -2234,14 +2224,13 @@
             if (
               currentUser &&
               (
-                req.requested_by ===
-                  currentUser.name ||
+                isOwnRequest(req) ||
                 isSuperAdmin()
               )
             ) {
 
               reqClick =
-                `onclick="deleteRequest('${req.id}', '휴무 신청')"`;
+                `onclick="deleteRequest('${req.id}', '${req.request_kind === 'support' ? '추가 지원' : '휴무 신청'}')"`;
 
               reqClass +=
                 ' clickable';
@@ -2320,7 +2309,6 @@
             if (
               canRequestOff() &&
               shift !== '휴무' &&
-              !hasMyRequest &&
               (
                 isSuperAdmin() ||
                 team === currentUser.team
@@ -2378,7 +2366,7 @@
               <div
                 class="${reqClass}"
                 ${reqClick}
-                title="${reqClick ? '클릭 시 휴무 신청/삭제' : ''}"
+                title="${reqClick ? '클릭 시 휴무·추가 지원 신청/삭제' : ''}"
               >
                 ${reqName}
               </div>
@@ -2474,6 +2462,25 @@
    * ==========================================
    */
 
+  function isOwnRequest(request) {
+    if (!currentUser) return false;
+    return request.requested_by_id != null
+      ? String(request.requested_by_id) === String(currentUser.id)
+      : request.requested_by === currentUser.name;
+  }
+
+  function escapeRequestText(value) {
+    return String(value ?? '').replace(/[&<>"']/g, character => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[character]));
+  }
+
+  function requestDisplayName(request) {
+    return request.request_kind === 'support'
+      ? (request.reason || '').trim() || '지원'
+      : request.requested_by;
+  }
+
   async function requestOff(
     date,
     shift,
@@ -2522,12 +2529,29 @@
         : currentUser.team;
 
 
-    const reason =
-      prompt(
-        `[${requestTeam}조 / ${date}] 휴무 사유를 적어주세요.\n` +
-        `(예: 연차, 경조사 등. 비워둬도 됩니다)\n\n` +
-        `※ 취소를 누르면 신청되지 않습니다.`
-      );
+    const kindInput = prompt(
+      '신청 종류를 선택해 주세요.\n1: 개인 휴무\n2: 추가 지원 (정수·업무량 증가 등)',
+      '1'
+    );
+    if (kindInput === null) return;
+    const kindChoice = kindInput.trim();
+    if (!['1', '2'].includes(kindChoice)) {
+      alert('1 또는 2를 입력해 주세요.');
+      return;
+    }
+    const requestKind = kindChoice === '2' ? 'support' : 'off';
+    if (requestKind === 'off' && requestsData.some(request =>
+      request.shift_date === date && request.team === requestTeam &&
+      request.request_kind !== 'support' && isOwnRequest(request)
+    )) {
+      alert('이 날짜에 이미 본인의 휴무 신청이 있습니다. 추가 지원은 별도로 등록할 수 있습니다.');
+      return;
+    }
+    const reason = prompt(
+      requestKind === 'support'
+        ? `[${requestTeam}조 / ${date}] 달력에 표시할 지원 사유를 적어주세요.\n(예: 정수, 지원, 업무량 증가)\n\n이 문구가 이름 대신 표시됩니다.`
+        : `[${requestTeam}조 / ${date}] 휴무 사유를 적어주세요.\n(예: 연차, 경조사 등. 비워둬도 됩니다)\n\n※ 취소를 누르면 신청되지 않습니다.`
+    );
 
 
     if (
@@ -2539,6 +2563,11 @@
     }
 
 
+    if (requestKind === 'support' && !reason.trim()) {
+      alert('추가 지원 사유를 입력해 주세요.');
+      return;
+    }
+
     const {
       error
     } =
@@ -2549,6 +2578,9 @@
           {
             requested_by:
               currentUser.name,
+
+            requested_by_id: currentUser.id,
+            request_kind: requestKind,
 
             team:
               requestTeam,
@@ -3245,8 +3277,7 @@
 
     if (
       currentUser.role === 'user' &&
-      targetRequest.requested_by !==
-        currentUser.name
+      !isOwnRequest(targetRequest)
     ) {
 
       alert(
