@@ -198,14 +198,39 @@
       color: #1e8449;
     }
 
+    /* =========================
+       대근 조별 색상
+       A조 = 파랑 / B조 = 초록
+       C조 = 주황 / D조 = 보라
+    ========================= */
+
     .sub-data {
-      color: #27ae60;
-      background-color: #e8f8f5;
       width: 100%;
       height: 100%;
       justify-content: center;
       display: flex;
       align-items: center;
+      font-weight: bold;
+    }
+
+    .sub-data.sub-team-a {
+      background-color: #E3F2FD;
+      color: #1565C0;
+    }
+
+    .sub-data.sub-team-b {
+      background-color: #E8F5E9;
+      color: #2E7D32;
+    }
+
+    .sub-data.sub-team-c {
+      background-color: #FFF3E0;
+      color: #E65100;
+    }
+
+    .sub-data.sub-team-d {
+      background-color: #F3E5F5;
+      color: #6A1B9A;
     }
 
     .reason-text {
@@ -215,13 +240,44 @@
     }
 
     .suggest-box {
-      background-color: #e2e8f0;
+      font-weight: bold;
+    }
+
+    .suggest-box.sub-team-a {
+      background-color: #E3F2FD;
+    }
+
+    .suggest-box.sub-team-b {
+      background-color: #E8F5E9;
+    }
+
+    .suggest-box.sub-team-c {
+      background-color: #FFF3E0;
+    }
+
+    .suggest-box.sub-team-d {
+      background-color: #F3E5F5;
     }
 
     .suggest-guide {
-      color: #0056b3;
       font-weight: bold;
       font-size: 12px;
+    }
+
+    .suggest-box.sub-team-a .suggest-guide {
+      color: #1565C0;
+    }
+
+    .suggest-box.sub-team-b .suggest-guide {
+      color: #2E7D32;
+    }
+
+    .suggest-box.sub-team-c .suggest-guide {
+      color: #E65100;
+    }
+
+    .suggest-box.sub-team-d .suggest-guide {
+      color: #6A1B9A;
     }
 
     .s-day {
@@ -284,15 +340,6 @@
         </h2>
 
         <div style="display: flex; gap: 6px;">
-          <button
-            id="notificationButton"
-            onclick="enableNotifications()"
-            class="btn-small"
-            style="background-color: #28a745;"
-          >
-            🔔 알림 설정
-          </button>
-
           <button
             onclick="changePersonalCode()"
             class="btn-small"
@@ -363,19 +410,17 @@
         line-height: 1.4;
       ">
 
-  🔔 <strong>휴무 등록 알림:</strong>
-  휴무를 등록하면 <strong>휴무 신청 조와 해당 날짜의 대근조</strong> 직원에게 알림이 발송됩니다.<br>
+        💡 <strong>휴무 신청:</strong>
+        일반 사용자 및 슈퍼관리자는 휴무 신청 가능
+        (조 관리자는 휴무 신청 불가)<br>
 
-  🔔 <strong>대근 등록 알림:</strong>
-  대근이 등록되면 <strong>휴무 신청 조와 대근조</strong> 직원에게 알림이 발송됩니다.<br>
+        💡 <strong>대근 신청:</strong>
+        일반 사용자는 다른 조 대근,
+        조 관리자는 자기 조 대근,
+        슈퍼관리자는 전체 조 대근 가능
 
-  📌 <strong>예시:</strong>
-  B조 홍길동님이 10월 18일 주간 휴무 신청 →
-  <strong>B조 + 대근조(A조)</strong>에 알림 발송,
-  C조·D조에는 알림이 발송되지 않습니다.<br>
-
-  💡 <strong>달력 이동:</strong>
-  가운데 표시된 <strong>년·월을 클릭</strong>하면 원하는 년·월로 바로 이동할 수 있습니다.
+        💡 <strong>달력 이동:</strong>
+        가운데 표시된 <strong>년·월을 클릭</strong>하면 원하는 년·월로 바로 이동할 수 있습니다.<br>
 
       </p>
 
@@ -428,11 +473,6 @@
    */
   const SUPABASE_ANON_KEY =
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxcWp5ZWRmd2xxaW5wcGNydmpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3MzQ3NDgsImV4cCI6MjEwNjMxMDc0OH0.8N5fmaNOdNG1hKDTzAYYX6Pd9bc0AnJvBzGQpfsndFo';
-
-  // 🔔 Web Push VAPID 공개키
-  // 아래 문자열에 생성한 Public Key를 넣어주세요.
-  const VAPID_PUBLIC_KEY =
-    'BMOwpjlyVl1JdfrCuFQW8bYnlmzCgVCpMSSxtJ7uxl7qHVYBbF-6SossGQAnVeG34ULs5Yv2jPXd6Fob2aJL5vc';
 
   const supabaseClient =
     supabase.createClient(
@@ -893,7 +933,7 @@
       await supabaseClient
         .from('app_users')
         .select(
-          'id, name, team, role, is_active'
+          'name, team, role, is_active'
         )
         .eq(
           'login_code',
@@ -937,9 +977,6 @@
 
 
     currentUser = {
-
-      id:
-        data.id,
 
       name:
         data.name,
@@ -996,206 +1033,6 @@
 
     loadData();
 
-    // 로그인 후 현재 알림 권한 상태를 버튼에 반영
-    updateNotificationButton();
-
-  }
-
-
-  /*
-   * ==========================================
-   * 🔔 웹 푸시 알림
-   * ==========================================
-   */
-
-  function urlBase64ToUint8Array(base64String) {
-
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-
-    const base64 = (base64String + padding)
-      .replace(/-/g, '+')
-      .replace(/_/g, '/');
-
-    const rawData = window.atob(base64);
-
-    return Uint8Array.from(
-      [...rawData].map(char => char.charCodeAt(0))
-    );
-  }
-
-
-  async function enableNotifications() {
-
-    try {
-
-      if (!currentUser) {
-        alert('로그인 후 알림을 설정할 수 있습니다.');
-        return;
-      }
-
-      if (!('Notification' in window)) {
-        alert('현재 브라우저에서는 알림 기능을 지원하지 않습니다.');
-        return;
-      }
-
-      if (!('serviceWorker' in navigator)) {
-        alert('현재 브라우저에서는 Service Worker를 지원하지 않습니다.');
-        return;
-      }
-
-      if (!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY.includes('여기에_')) {
-        alert('VAPID Public Key가 index.html에 입력되지 않았습니다.');
-        return;
-      }
-
-      if (Notification.permission === 'denied') {
-        alert(
-          '이 사이트의 알림이 차단되어 있습니다.\n\n' +
-          '브라우저 사이트 설정에서 알림을 허용한 뒤 다시 시도해 주세요.'
-        );
-        return;
-      }
-
-      const permission = await Notification.requestPermission();
-
-      if (permission !== 'granted') {
-        alert('알림 권한을 허용하지 않았습니다.');
-        updateNotificationButton();
-        return;
-      }
-
-      const registration = await navigator.serviceWorker.ready;
-
-      let subscription = await registration.pushManager.getSubscription();
-
-      if (!subscription) {
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-        });
-      }
-
-      const subscriptionJson = subscription.toJSON();
-      const endpoint = subscription.endpoint;
-
-      if (!endpoint) {
-        alert('푸시 구독 정보를 확인하지 못했습니다.');
-        return;
-      }
-
-      /*
-       * ==========================================
-       * 기기별 Push Subscription 저장
-       * ==========================================
-       *
-       * 중요:
-       * user_id를 UNIQUE로 사용하지 않습니다.
-       *
-       * 같은 직원이 스마트폰 + PC를 사용하는 경우
-       * 각각 별도의 Push Subscription을 저장해야 합니다.
-       *
-       * 따라서 현재 사용자의 기존 구독 중
-       * 현재 브라우저의 endpoint가 있으면 그 행만 UPDATE,
-       * 없으면 새로운 행을 INSERT합니다.
-       */
-
-      const { data: existingRows, error: findError } =
-        await supabaseClient
-          .from('push_subscriptions')
-          .select('id, user_id, user_name, subscription')
-          .eq('user_id', currentUser.id);
-
-      if (findError) {
-        console.error('기존 푸시 구독 조회 실패:', findError);
-        alert(
-          '기존 알림 설정을 확인하지 못했습니다.\n\n' +
-          findError.message
-        );
-        return;
-      }
-
-      const existingRow = (existingRows || []).find(row =>
-        row.subscription &&
-        row.subscription.endpoint === endpoint
-      );
-
-      let saveError = null;
-
-      if (existingRow) {
-
-        const { error } = await supabaseClient
-          .from('push_subscriptions')
-          .update({
-            user_id: currentUser.id,
-            user_name: currentUser.name,
-            subscription: subscriptionJson,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingRow.id);
-
-        saveError = error;
-
-      } else {
-
-        const { error } = await supabaseClient
-          .from('push_subscriptions')
-          .insert({
-            user_id: currentUser.id,
-            user_name: currentUser.name,
-            subscription: subscriptionJson,
-            updated_at: new Date().toISOString()
-          });
-
-        saveError = error;
-      }
-
-      if (saveError) {
-        console.error('푸시 구독 저장 실패:', saveError);
-        alert(
-          '알림 구독 저장에 실패했습니다.\n\n' +
-          saveError.message
-        );
-        return;
-      }
-
-      updateNotificationButton();
-
-      alert(
-        '🔔 알림 설정이 완료되었습니다.\n\n' +
-        '이 기기에서 휴무·대근 관련 알림을 받을 수 있습니다.'
-      );
-
-    } catch (error) {
-
-      console.error('알림 설정 오류:', error);
-
-      alert(
-        '알림 설정 중 오류가 발생했습니다.\n\n' +
-        (error?.message || error)
-      );
-    }
-  }
-
-
-  function updateNotificationButton() {
-
-    const button = document.getElementById('notificationButton');
-
-    if (!button) return;
-
-    if (!('Notification' in window)) {
-      button.innerText = '🔔 알림 미지원';
-      button.disabled = true;
-      return;
-    }
-
-    if (Notification.permission === 'granted') {
-      button.innerText = '🔔 알림 허용됨';
-      button.style.backgroundColor = '#6c757d';
-    } else {
-      button.innerText = '🔔 알림 설정';
-      button.style.backgroundColor = '#28a745';
-    }
   }
 
 
@@ -1203,119 +1040,25 @@
    * ==========================================
    * 로그아웃
    * ==========================================
-   *
-   * 공용 PC에서 A가 알림을 설정한 뒤 로그아웃하고
-   * B가 로그인하는 경우를 고려합니다.
-   *
-   * 중요:
-   * user_id 전체를 삭제하지 않습니다.
-   *
-   * 로그아웃하는 현재 브라우저의 Push Subscription
-   * endpoint와 일치하는 행만 삭제합니다.
-   *
-   * 따라서 같은 직원이 스마트폰과 PC에서 각각 알림을
-   * 설정해 둔 경우 PC 로그아웃을 해도 스마트폰 등록은 유지됩니다.
-   *
-   * ※ 브라우저의 알림 권한 자체는 취소하지 않습니다.
    */
 
-  async function logout() {
+  function logout() {
 
-    const userId = currentUser?.id;
+    currentUser = null;
 
-    try {
+    currentLoginCode = '';
 
-      let currentEndpoint = null;
+    document
+      .getElementById('loginCode')
+      .value = '';
 
-      /*
-       * 로그아웃 전에 현재 브라우저의 endpoint를 확보합니다.
-       * unsubscribe를 먼저 하면 endpoint를 확인할 수 없기 때문입니다.
-       */
-      if ('serviceWorker' in navigator) {
-        try {
-          const registration = await navigator.serviceWorker.ready;
-          const subscription = await registration.pushManager.getSubscription();
+    document
+      .getElementById('mainScreen')
+      .style.display = 'none';
 
-          if (subscription) {
-            currentEndpoint = subscription.endpoint;
-          }
-        } catch (pushError) {
-          console.error('현재 브라우저 Push Subscription 확인 실패:', pushError);
-        }
-      }
-
-      if (userId && currentEndpoint) {
-
-        const { data: rows, error: findError } =
-          await supabaseClient
-            .from('push_subscriptions')
-            .select('id, subscription')
-            .eq('user_id', userId);
-
-        if (findError) {
-          console.error('로그아웃 시 푸시 구독 조회 실패:', findError);
-        } else {
-
-          const rowsToDelete = (rows || []).filter(row =>
-            row.subscription &&
-            row.subscription.endpoint === currentEndpoint
-          );
-
-          for (const row of rowsToDelete) {
-            const { error: deleteError } =
-              await supabaseClient
-                .from('push_subscriptions')
-                .delete()
-                .eq('id', row.id);
-
-            if (deleteError) {
-              console.error(
-                '로그아웃 시 현재 기기 푸시 구독 삭제 실패:',
-                deleteError
-              );
-            }
-          }
-        }
-      }
-
-      /*
-       * 현재 브라우저의 Push Subscription을 해제합니다.
-       * 다른 기기의 구독에는 영향을 주지 않습니다.
-       */
-      if ('serviceWorker' in navigator) {
-        try {
-          const registration = await navigator.serviceWorker.ready;
-          const subscription = await registration.pushManager.getSubscription();
-
-          if (subscription) {
-            await subscription.unsubscribe();
-          }
-        } catch (pushError) {
-          console.error('브라우저 Push Subscription 해제 실패:', pushError);
-        }
-      }
-
-    } catch (error) {
-      console.error('로그아웃 처리 중 오류:', error);
-    } finally {
-
-      currentUser = null;
-      currentLoginCode = '';
-
-      document
-        .getElementById('loginCode')
-        .value = '';
-
-      document
-        .getElementById('mainScreen')
-        .style.display = 'none';
-
-      document
-        .getElementById('loginScreen')
-        .style.display = 'block';
-
-      updateNotificationButton();
-    }
+    document
+      .getElementById('loginScreen')
+      .style.display = 'block';
 
   }
 
@@ -1444,7 +1187,7 @@
     );
 
 
-    await logout();
+    logout();
 
   }
 
@@ -2253,7 +1996,7 @@
             if (req.filled_by) {
 
               subName = `
-                <div class="has-data sub-data">
+                <div class="has-data sub-data sub-team-${team.toLowerCase()}">
                   <span>${req.filled_by}</span>
                 </div>
               `;
@@ -2287,7 +2030,7 @@
                   `<span class="suggest-guide">${suggestedTeam}</span>`;
 
                 subCellClass +=
-                  ' suggest-box';
+                  ` suggest-box sub-team-${team.toLowerCase()}`;
 
               }
 
@@ -2349,7 +2092,7 @@
                 `<span class="suggest-guide">${suggestedTeam}</span>`;
 
               subCellClass +=
-                ' suggest-box';
+                  ` suggest-box sub-team-${team.toLowerCase()}`;
 
             }
 
