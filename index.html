@@ -766,14 +766,16 @@
   /*
    * 대근 등록 권한을 달력 표시와 실제 처리에서 함께 사용합니다.
    * 일반 사용자: 다른 조 휴무에 등록
-   * 조 관리자: 자기 조 휴무에 등록
+   * 조 관리자: 담당하는 다른 조 휴무에 자기 조 직원을 지정
    * 슈퍼관리자: 모든 조 휴무에 등록
    */
   function canRegisterSubstitution(targetTeam) {
     if (!currentUser || !currentUser.is_active) return false;
     if (currentUser.role === 'admin') return true;
     if (currentUser.role === 'team_admin') {
-      return targetTeam === currentUser.team;
+      return (currentUser.team === 'A' || currentUser.team === 'D')
+        ? ['B', 'C'].includes(targetTeam)
+        : (currentUser.team === 'B' || currentUser.team === 'C') && ['A', 'D'].includes(targetTeam);
     }
     if (currentUser.role === 'user') {
       return targetTeam !== currentUser.team;
@@ -2272,7 +2274,7 @@
                   isSuperAdmin() ||
                   (
                     isTeamAdmin() &&
-                    req.team === currentUser.team
+                    canRegisterSubstitution(req.team)
                   )
                 )
               ) {
@@ -2735,7 +2737,7 @@
       if (currentUser.role === 'team_admin') {
         alert(
           `🚫 ${currentUser.team}조 관리자입니다.\n` +
-          `다른 조(${targetTeam}조)의 대근에는 관여할 수 없습니다.`
+          `담당 대근칸에서만 자기 조 직원을 지정할 수 있습니다.`
         );
       } else if (currentUser.role === 'user' && targetTeam === currentUser.team) {
         alert("🚫 일반 사용자는 다른 조의 휴무에만 대근 등록할 수 있습니다.");
@@ -2851,6 +2853,11 @@
 
       const subTeam =
         foundUser.team;
+
+      if (isTeamAdmin() && subTeam !== currentUser.team) {
+        alert('🚫 조 관리자는 자기 조 직원만 대근자로 지정할 수 있습니다.');
+        return;
+      }
 
 
       /*
@@ -3100,18 +3107,17 @@
     /*
      * 조 관리자
      *
-     * 자기 조의 대근만 취소
+     * 담당 대근칸의 자기 조 직원 대근만 취소
      */
 
     if (
       isTeamAdmin() &&
-      targetRequest.team !==
-        currentUser.team
+      !canRegisterSubstitution(targetRequest.team)
     ) {
 
       alert(
         `🚫 ${currentUser.team}조 관리자입니다.\n` +
-        `다른 조의 대근은 취소할 수 없습니다.`
+        `담당 대근칸의 자기 조 직원 대근만 취소할 수 있습니다.`
       );
 
       return;
