@@ -1,4 +1,4 @@
-const CACHE_NAME = 'snnc-pwa-v2';
+const CACHE_NAME = 'snnc-pwa-v3';
 
 const FILES_TO_CACHE = [
   './',
@@ -47,7 +47,20 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   event.respondWith(
-    fetch(event.request)
+    (event.request.mode === 'navigate'
+      ? fetch(event.request, { cache: 'no-cache' })
+          .then(async response => {
+            if (response.ok) {
+              try {
+                const cache = await caches.open(CACHE_NAME);
+                await cache.put(event.request, response.clone());
+              } catch (error) {
+                console.warn('페이지 캐시 갱신 실패:', error);
+              }
+            }
+            return response;
+          })
+      : fetch(event.request))
       .catch(() => caches.match(event.request))
   );
 });
