@@ -397,9 +397,10 @@
 
     <div class="card" style="padding: 10px; font-size: 13px; line-height: 1.6;">
       <strong>휴무·추가 지원 신청 안내</strong><br>
-      사유에 <strong>정수</strong> 또는 <strong>지원</strong>이 포함되면 추가 지원으로 등록되며,
-      달력에는 신청자 이름 대신 <strong>입력한 사유 전체</strong>가 표시됩니다.<br>
-      예: 정수 지원, 정수지원, 지원 · 일반 휴무는 기존처럼 이름과 사유가 표시됩니다.
+      사유에 <strong>정수</strong>가 포함되면 이름 대신 <strong>정수 지원</strong>으로 표시됩니다.<br>
+      <strong>정수</strong> 없이 <strong>지원</strong>이 포함되면 <strong>지원</strong>으로 표시됩니다.<br>
+      예: 정수, 정수지원, 정수 지원 → 정수 지원 · 지원 → 지원<br>
+      해당 신청은 추가 지원으로 등록되며, 일반 휴무는 기존처럼 이름과 사유가 표시됩니다.
     </div>
 
     <div class="card" style="padding: 10px;">
@@ -2491,8 +2492,11 @@
   }
 
   function requestDisplayName(request) {
-    return isSupportRequest(request)
-      ? (request.reason || '').trim() || '지원'
+    const reason = String(request.reason ?? '');
+    if (reason.includes('정수')) return '정수 지원';
+    if (reason.includes('지원')) return '지원';
+    return request.request_kind === 'support'
+      ? reason.trim() || '지원'
       : request.requested_by;
   }
 
@@ -2547,8 +2551,8 @@
     const reason = prompt(
       `[${requestTeam}조 / ${date}] 사유를 적어주세요.\n` +
       '사유에 "정수" 또는 "지원"이 포함되면 추가 지원으로 등록되고,\n' +
-      '달력에는 이름 대신 입력한 사유 전체가 표시됩니다.\n' +
-      '(예: 정수 지원, 정수지원, 지원)\n\n' +
+      '"정수" 포함 → 정수 지원, "정수" 없이 "지원" 포함 → 지원으로 표시됩니다.\n' +
+      '(예: 정수, 정수지원, 정수 지원 → 정수 지원)\n\n' +
       '일반 휴무 사유는 기존처럼 이름과 함께 표시됩니다.\n' +
       '※ 취소를 누르면 신청되지 않습니다.'
     );
