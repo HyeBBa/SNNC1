@@ -246,6 +246,25 @@
 
 <body>
 
+  <div id="inAppBrowserNotice" style="
+    display: none;
+    background: #fff3cd;
+    border: 1px solid #ffe69c;
+    color: #664d03;
+    padding: 12px;
+    margin: 0 0 10px 0;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    text-align: center;
+  ">
+    <strong>📢 카카오톡에서 접속하셨습니다.</strong><br>
+    앱 설치 기능을 사용하려면 이 페이지를
+    <strong id="externalBrowserName">Chrome 또는 Safari</strong>에서 열어주세요.<br>
+    카카오톡의 메뉴(⋮ 또는 공유 메뉴)에서
+    <strong>외부 브라우저로 열기</strong>를 선택해 주세요.
+  </div>
+
   <!-- 로그인 -->
   <div id="loginScreen"
        class="card"
@@ -274,6 +293,19 @@
       "
     >
       📱 앱으로 설치하기
+    </button>
+
+    <button
+      id="loginIphoneInstallButton"
+      type="button"
+      onclick="showIphoneInstallGuide()"
+      style="
+        display: block;
+        margin-top: 8px;
+        background-color: #6f42c1;
+      "
+    >
+      🍎 iPhone 설치 방법
     </button>
 
   </div>
@@ -3364,104 +3396,307 @@
     return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
   }
 
+  function isAndroidDevice() {
+    return /android/i.test(window.navigator.userAgent);
+  }
+
+  function isKakaoTalkBrowser() {
+    return /KAKAOTALK/i.test(window.navigator.userAgent);
+  }
+
   function isSafariBrowser() {
     const ua = window.navigator.userAgent;
+
     return (
       /safari/i.test(ua) &&
-      !/chrome|crios|android|fxios|edgios/i.test(ua)
+      !/chrome|crios|android|fxios|edgios|kakaotalk/i.test(ua)
     );
   }
 
-  function updateInstallButton() {
-    const button = document.getElementById('installAppButton');
-    if (!button) return;
+  /*
+   * 카카오톡 인앱 브라우저에서는 PWA 설치가 정상적으로
+   * 동작하지 않을 수 있으므로 외부 브라우저 안내를 표시합니다.
+   */
+  function updateInAppBrowserNotice() {
+    const notice = document.getElementById('inAppBrowserNotice');
+    const browserName = document.getElementById('externalBrowserName');
+
+    if (!notice) return;
+
+    if (!isKakaoTalkBrowser() || isStandaloneMode()) {
+      notice.style.display = 'none';
+      return;
+    }
+
+    notice.style.display = 'block';
+
+    if (browserName) {
+      browserName.innerText =
+        isIOSDevice()
+          ? 'Safari'
+          : isAndroidDevice()
+            ? 'Chrome'
+            : '외부 브라우저';
+    }
+  }
+
+  function updateInstallButtons() {
+    const androidButton =
+      document.getElementById('androidInstallButton');
+
+    const iphoneButton =
+      document.getElementById('iphoneInstallButton');
+
+    const loginInstallButton =
+      document.getElementById('installAppButton');
+
+    const loginIphoneButton =
+      document.getElementById('loginIphoneInstallButton');
 
     if (isStandaloneMode()) {
-      button.style.display = 'none';
+      if (androidButton) androidButton.style.display = 'none';
+      if (iphoneButton) iphoneButton.style.display = 'none';
+      if (loginInstallButton) loginInstallButton.style.display = 'none';
+      if (loginIphoneButton) loginIphoneButton.style.display = 'none';
       return;
     }
 
-    if (deferredInstallPrompt) {
-      button.style.display = 'block';
-      button.innerText = '📱 앱으로 설치하기';
-      return;
+    /*
+     * 로그인 전에도 iPhone 설치 방법을 볼 수 있도록
+     * 로그인 화면의 iPhone 버튼은 항상 표시합니다.
+     */
+    if (loginIphoneButton) {
+      loginIphoneButton.style.display = 'block';
     }
 
-    if (isIOSDevice()) {
-      button.style.display = 'block';
-      button.innerText = '📱 홈 화면에 추가하기';
-      return;
+    /*
+     * Android:
+     * beforeinstallprompt가 준비된 경우에만
+     * 'Android 앱 설치' 버튼을 표시합니다.
+     */
+    if (androidButton) {
+      androidButton.style.display =
+        deferredInstallPrompt
+          ? 'inline-block'
+          : 'none';
     }
 
-    button.style.display = 'block';
-    button.innerText = '📱 앱으로 설치하기';
+    /*
+     * iPhone:
+     * iOS에서는 JavaScript로 설치창을 직접 띄울 수 없으므로
+     * 설치 방법 안내 버튼을 항상 표시합니다.
+     */
+    if (iphoneButton) {
+      iphoneButton.style.display = 'inline-block';
+    }
+
+    /*
+     * 로그인 화면의 기존 설치 버튼도 동일하게 처리합니다.
+     */
+    if (loginInstallButton) {
+      if (deferredInstallPrompt) {
+        loginInstallButton.style.display = 'block';
+        loginInstallButton.innerText = '📱 앱으로 설치하기';
+      } else if (isIOSDevice()) {
+        loginInstallButton.style.display = 'block';
+        loginInstallButton.innerText = '📱 홈 화면에 추가하기';
+      } else {
+        loginInstallButton.style.display = 'none';
+      }
+    }
   }
 
   window.addEventListener('beforeinstallprompt', (event) => {
     event.preventDefault();
+
     deferredInstallPrompt = event;
-    updateInstallButton();
+
+    updateInstallButtons();
   });
 
   window.addEventListener('appinstalled', () => {
     deferredInstallPrompt = null;
-    updateInstallButton();
+
+    updateInstallButtons();
   });
 
-  async function installPWA() {
-    const button = document.getElementById('installAppButton');
+  /*
+   * Android 전용 설치 함수
+   */
+  async function installAndroidApp() {
 
-    if (isStandaloneMode()) return;
-
-    if (deferredInstallPrompt) {
-      const promptEvent = deferredInstallPrompt;
-      deferredInstallPrompt = null;
-
-      if (button) {
-        button.disabled = true;
-        button.innerText = '설치 창을 확인해 주세요';
-      }
-
-      try {
-        await promptEvent.prompt();
-        const choice = await promptEvent.userChoice;
-
-        if (choice.outcome === 'accepted') {
-          if (button) button.style.display = 'none';
-        } else {
-          updateInstallButton();
-        }
-      } catch (error) {
-        console.warn('PWA 설치 실행 실패:', error);
-        updateInstallButton();
-      } finally {
-        if (button) button.disabled = false;
-      }
+    if (isStandaloneMode()) {
       return;
     }
 
-    if (isIOSDevice()) {
+    if (isKakaoTalkBrowser()) {
       alert(
-        '📱 아이폰/아이패드에서 앱으로 추가하는 방법\n\n' +
-        '1. Safari에서 이 사이트를 열어주세요.\n' +
-        '2. 화면의 공유 버튼(□↑)을 누르세요.\n' +
-        '3. "홈 화면에 추가"를 선택하세요.\n' +
-        '4. "추가"를 누르면 앱 아이콘이 홈 화면에 만들어집니다.'
+        '📢 카카오톡에서는 Android 앱 설치창이 열리지 않을 수 있습니다.\n\n' +
+        '카카오톡 메뉴에서 "외부 브라우저로 열기"를 선택한 후\n' +
+        'Chrome에서 다시 이 사이트를 열어주세요.'
       );
       return;
     }
 
-    const browserHint =
-      isSafariBrowser()
-        ? 'Safari에서는 브라우저의 공유 메뉴에서 "홈 화면에 추가"를 이용해 주세요.'
-        : '현재 브라우저에서는 설치 메뉴가 별도로 제공될 수 있습니다. 브라우저 메뉴에서 "앱 설치" 또는 "홈 화면에 추가"를 찾아주세요.';
+    if (!isAndroidDevice()) {
+      alert(
+        '📱 이 버튼은 Android 기기용 설치 버튼입니다.\n\n' +
+        'iPhone에서는 "🍎 iPhone 설치 방법" 버튼을 이용해 주세요.'
+      );
+      return;
+    }
 
-    alert('📱 앱 설치 안내\n\n' + browserHint);
+    if (!deferredInstallPrompt) {
+      alert(
+        '📱 지금 바로 설치창을 열 수 없습니다.\n\n' +
+        'Chrome에서 이 사이트를 열었는지 확인하고,\n' +
+        '페이지를 새로고침한 뒤 다시 시도해 주세요.\n\n' +
+        '※ 이미 설치되어 있거나 설치 가능한 PWA 조건이 충족되지 않은 경우에도 설치창이 나타나지 않을 수 있습니다.'
+      );
+      return;
+    }
+
+    const promptEvent = deferredInstallPrompt;
+    deferredInstallPrompt = null;
+
+    const button =
+      document.getElementById('androidInstallButton');
+
+    if (button) {
+      button.disabled = true;
+      button.innerText = '설치 창을 확인해 주세요';
+    }
+
+    try {
+
+      await promptEvent.prompt();
+
+      const choice =
+        await promptEvent.userChoice;
+
+      if (choice.outcome === 'accepted') {
+
+        if (button) {
+          button.style.display = 'none';
+        }
+
+      } else {
+
+        updateInstallButtons();
+
+      }
+
+    } catch (error) {
+
+      console.warn(
+        'Android PWA 설치 실행 실패:',
+        error
+      );
+
+      updateInstallButtons();
+
+    } finally {
+
+      if (button) {
+        button.disabled = false;
+      }
+
+    }
+  }
+
+  /*
+   * iPhone 설치 방법 안내
+   */
+  function showIphoneInstallGuide() {
+
+    if (isStandaloneMode()) {
+      alert(
+        '✅ 이미 홈 화면에서 앱으로 실행 중입니다.'
+      );
+      return;
+    }
+
+    if (!isIOSDevice()) {
+      alert(
+        '🍎 이 버튼은 iPhone/iPad 설치 방법 안내입니다.\n\n' +
+        'Android에서는 "📱 Android 앱 설치" 버튼을 이용해 주세요.'
+      );
+      return;
+    }
+
+    if (isKakaoTalkBrowser()) {
+
+      alert(
+        '🍎 iPhone 설치 방법\n\n' +
+        '현재 카카오톡 안에서 페이지를 열고 있습니다.\n\n' +
+        '① 먼저 카카오톡 메뉴에서 "외부 브라우저로 열기"를 선택하세요.\n' +
+        '② Safari에서 이 사이트를 엽니다.\n' +
+        '③ Safari 아래쪽의 공유 버튼(□↑)을 누릅니다.\n' +
+        '④ "홈 화면에 추가"를 선택합니다.\n' +
+        '⑤ 오른쪽 위 "추가"를 누르면 홈 화면에 앱 아이콘이 만들어집니다.'
+      );
+
+      return;
+    }
+
+    if (!isSafariBrowser()) {
+
+      alert(
+        '🍎 iPhone에서는 Safari에서 설치하는 것이 가장 간단합니다.\n\n' +
+        '① Safari에서 이 사이트를 엽니다.\n' +
+        '② 아래쪽 공유 버튼(□↑)을 누릅니다.\n' +
+        '③ "홈 화면에 추가"를 선택합니다.\n' +
+        '④ 오른쪽 위 "추가"를 누릅니다.'
+      );
+
+      return;
+    }
+
+    alert(
+      '🍎 iPhone 앱 설치 방법\n\n' +
+      '① Safari에서 현재 사이트를 엽니다.\n\n' +
+      '② 화면 아래쪽의 공유 버튼(□↑)을 누릅니다.\n\n' +
+      '③ 메뉴에서 "홈 화면에 추가"를 선택합니다.\n\n' +
+      '④ 오른쪽 위 "추가"를 누릅니다.\n\n' +
+      '⑤ 홈 화면에 "교대 근무" 앱 아이콘이 생성됩니다.'
+    );
+  }
+
+  /*
+   * 로그인 화면의 설치 버튼
+   */
+  async function installPWA() {
+
+    if (isStandaloneMode()) {
+      return;
+    }
+
+    if (isIOSDevice()) {
+      showIphoneInstallGuide();
+      return;
+    }
+
+    if (isAndroidDevice()) {
+      await installAndroidApp();
+      return;
+    }
+
+    if (!deferredInstallPrompt) {
+      alert(
+        '📱 현재 브라우저에서는 바로 설치창을 열 수 없습니다.\n\n' +
+        'Chrome 또는 Edge에서 이 사이트를 열어주세요.'
+      );
+      return;
+    }
+
+    await installAndroidApp();
   }
 
   window.addEventListener('load', () => {
-    updateInstallButton();
+    updateInAppBrowserNotice();
+    updateInstallButtons();
   });
+</script>
 </script>
 
 <script>
@@ -3469,7 +3704,11 @@
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./service-worker.js')
-        .then(() => console.log('PWA 서비스 워커 등록 완료'))
+        .then(() => {
+          console.log('PWA 서비스 워커 등록 완료');
+          updateInAppBrowserNotice();
+          updateInstallButtons();
+        })
         .catch(error => console.warn('PWA 서비스 워커 등록 실패:', error));
     });
   }
