@@ -3013,26 +3013,11 @@
        * 기존 휴무 신청에 대근자 지정
        */
 
-      const res =
-        await supabaseClient
-          .from('requests')
-          .update({
+      const result = await callSessionRegistration({
+        action: 'sub_register', request_id: id, filled_by: subName
+      });
+      error = result.success ? null : { message: result.message };
 
-            status:
-              'FILLED',
-
-            filled_by:
-              subName
-
-          })
-          .eq(
-            'id',
-            id
-          );
-
-
-      error =
-        res.error;
 
     }
 
@@ -3149,37 +3134,13 @@
     }
 
 
-    const {
-      error
-    } =
-      await supabaseClient
-        .from('requests')
-        .update({
-
-          status:
-            'OPEN',
-
-          filled_by:
-            null
-
-        })
-        .eq(
-          'id',
-          id
-        );
-
-
-    if (error) {
-
-      alert(
-        "❌ 대근 취소 실패: " +
-        error.message
-      );
-
+    const result = await callSessionRegistration({
+      action: 'sub_cancel', request_id: id
+    });
+    if (!result.success) {
+      alert('❌ 대근 취소 실패: ' + result.message);
     } else {
-
       loadData();
-
     }
 
   }
