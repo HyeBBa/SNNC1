@@ -2510,6 +2510,22 @@
       : request.requested_by;
   }
 
+  async function callSessionRegistration(body) {
+    try {
+      const { data, error } = await supabaseClient.functions.invoke('app-session', {
+        body, headers: { 'x-app-session': currentSessionToken }
+      });
+      if (!error && data?.success) return { success: true };
+      let message = data?.message || '세션 또는 입력 정보를 확인해 주세요. 필요하면 다시 로그인해 주세요.';
+      if (error?.context && typeof error.context.clone === 'function') {
+        try { message = (await error.context.clone().json()).message || message; } catch {}
+      }
+      return { success: false, message };
+    } catch {
+      return { success: false, message: '잠시 후 다시 시도해 주세요.' };
+    }
+  }
+
   async function requestOff(
     date,
     shift,
@@ -2577,51 +2593,13 @@
       return;
     }
 
-    const {
-      error
-    } =
-      await supabaseClient
-        .from('requests')
-        .insert([
-
-          {
-            requested_by:
-              currentUser.name,
-
-            requested_by_id: currentUser.id,
-            request_kind: requestKind,
-
-            team:
-              requestTeam,
-
-            shift_type:
-              shift,
-
-            shift_date:
-              date,
-
-            reason:
-              reason,
-
-            status:
-              'OPEN'
-
-          }
-
-        ]);
-
-
-    if (error) {
-
-      alert(
-        "❌ 휴무 신청 저장 실패: " +
-        error.message
-      );
-
+    const result = await callSessionRegistration({
+      action: 'request_create', team: requestTeam, date, reason
+    });
+    if (!result.success) {
+      alert('❌ 신청 저장 실패: ' + result.message);
     } else {
-
       loadData();
-
     }
 
   }
@@ -3023,41 +3001,10 @@
         );
 
 
-      const res =
-        await supabaseClient
-          .from('requests')
-          .insert([
-
-            {
-
-              requested_by:
-                `${tTeam}조 공석`,
-
-              team:
-                tTeam,
-
-              shift_type:
-                shift,
-
-              shift_date:
-                tDate,
-
-              reason:
-                '지정 대근',
-
-              status:
-                'FILLED',
-
-              filled_by:
-                subName
-
-            }
-
-          ]);
-
-
-      error =
-        res.error;
+      const result = await callSessionRegistration({
+        action: 'vacancy_create', team: tTeam, date: tDate, filled_by: subName
+      });
+      error = result.success ? null : { message: result.message };
 
 
     } else {
