@@ -3246,23 +3246,16 @@
     }
 
 
-    const {
-      error
-    } =
-      await supabaseClient
-        .from('requests')
-        .delete()
-        .eq(
-          'id',
-          id
-        );
+    const result = await callSessionRegistration({
+      action: 'request_delete', request_id: String(id)
+    });
 
 
-    if (error) {
+    if (!result.success) {
 
       alert(
         "❌ 삭제 실패: " +
-        error.message
+        result.message
       );
 
     } else {
