@@ -395,6 +395,13 @@
     </div>
 
 
+    <div class="card" style="padding: 10px; font-size: 13px; line-height: 1.6;">
+      <strong>휴무·추가 지원 신청 안내</strong><br>
+      사유에 <strong>정수</strong> 또는 <strong>지원</strong>이 포함되면 추가 지원으로 등록되며,
+      달력에는 신청자 이름 대신 <strong>입력한 사유 전체</strong>가 표시됩니다.<br>
+      예: 정수 지원, 정수지원, 지원 · 일반 휴무는 기존처럼 이름과 사유가 표시됩니다.
+    </div>
+
     <div class="card" style="padding: 10px;">
 
       <div style="
@@ -2208,7 +2215,7 @@
           if (req) {
 
             const reasonHtml =
-              req.request_kind !== 'support' && req.reason
+              !isSupportRequest(req) && req.reason
                 ? `<span class="reason-text">(${escapeRequestText(req.reason)})</span>`
                 : '';
 
@@ -2230,7 +2237,7 @@
             ) {
 
               reqClick =
-                `onclick="deleteRequest('${req.id}', '${req.request_kind === 'support' ? '추가 지원' : '휴무 신청'}')"`;
+                `onclick="deleteRequest('${req.id}', '${isSupportRequest(req) ? '추가 지원' : '휴무 신청'}')"`;
 
               reqClass +=
                 ' clickable';
@@ -2475,8 +2482,16 @@
     }[character]));
   }
 
+  function isSupportReason(reason) {
+    return /정수|지원/.test(String(reason ?? ''));
+  }
+
+  function isSupportRequest(request) {
+    return request.request_kind === 'support' || isSupportReason(request.reason);
+  }
+
   function requestDisplayName(request) {
-    return request.request_kind === 'support'
+    return isSupportRequest(request)
       ? (request.reason || '').trim() || '지원'
       : request.requested_by;
   }
@@ -2529,42 +2544,22 @@
         : currentUser.team;
 
 
-    const kindInput = prompt(
-      '신청 종류를 선택해 주세요.\n1: 개인 휴무\n2: 추가 지원 (정수·업무량 증가 등)',
-      '1'
+    const reason = prompt(
+      `[${requestTeam}조 / ${date}] 사유를 적어주세요.\n` +
+      '사유에 "정수" 또는 "지원"이 포함되면 추가 지원으로 등록되고,\n' +
+      '달력에는 이름 대신 입력한 사유 전체가 표시됩니다.\n' +
+      '(예: 정수 지원, 정수지원, 지원)\n\n' +
+      '일반 휴무 사유는 기존처럼 이름과 함께 표시됩니다.\n' +
+      '※ 취소를 누르면 신청되지 않습니다.'
     );
-    if (kindInput === null) return;
-    const kindChoice = kindInput.trim();
-    if (!['1', '2'].includes(kindChoice)) {
-      alert('1 또는 2를 입력해 주세요.');
-      return;
-    }
-    const requestKind = kindChoice === '2' ? 'support' : 'off';
+    if (reason === null) return;
+
+    const requestKind = isSupportReason(reason) ? 'support' : 'off';
     if (requestKind === 'off' && requestsData.some(request =>
       request.shift_date === date && request.team === requestTeam &&
-      request.request_kind !== 'support' && isOwnRequest(request)
+      !isSupportRequest(request) && isOwnRequest(request)
     )) {
       alert('이 날짜에 이미 본인의 휴무 신청이 있습니다. 추가 지원은 별도로 등록할 수 있습니다.');
-      return;
-    }
-    const reason = prompt(
-      requestKind === 'support'
-        ? `[${requestTeam}조 / ${date}] 달력에 표시할 지원 사유를 적어주세요.\n(예: 정수, 지원, 업무량 증가)\n\n이 문구가 이름 대신 표시됩니다.`
-        : `[${requestTeam}조 / ${date}] 휴무 사유를 적어주세요.\n(예: 연차, 경조사 등. 비워둬도 됩니다)\n\n※ 취소를 누르면 신청되지 않습니다.`
-    );
-
-
-    if (
-      reason === null
-    ) {
-
-      return;
-
-    }
-
-
-    if (requestKind === 'support' && !reason.trim()) {
-      alert('추가 지원 사유를 입력해 주세요.');
       return;
     }
 
