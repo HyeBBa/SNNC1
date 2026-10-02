@@ -2427,13 +2427,6 @@
           : '';
 
 
-      const safeMemoText =
-        memoText.replace(
-          /'/g,
-          "\\'"
-        );
-
-
       dayHtml += `
 
         <div class="team-row memo-row">
@@ -2457,9 +2450,9 @@
               font-weight: bold;
               color: #333;
             "
-            onclick="editMemo('${dateStr}', '${safeMemoText}')"
+            onclick="editMemo('${dateStr}')"
           >
-            ${memoText}
+            ${escapeRequestText(memoText)}
           </div>
 
         </div>
@@ -2615,7 +2608,7 @@
 
   async function editMemo(
     date,
-    currentMemo
+    currentMemo = memosData.find(memo => memo.date === date)?.memo || ''
   ) {
 
     if (!currentUser) {
@@ -2646,63 +2639,18 @@
     }
 
 
-    let error;
-
-
-    if (
-      newMemo.trim() === ''
-    ) {
-
-      const res =
-        await supabaseClient
-          .from('daily_memos')
-          .delete()
-          .eq(
-            'date',
-            date
-          );
-
-      error =
-        res.error;
-
-    } else {
-
-      const res =
-        await supabaseClient
-          .from('daily_memos')
-          .upsert([
-
-            {
-              date:
-                date,
-
-              memo:
-                newMemo,
-
-              created_by:
-                currentUser.name
-
-            }
-
-          ]);
-
-      error =
-        res.error;
-
+    if (Array.from(newMemo).length > 500) {
+      alert('메모는 500자 이내로 입력해 주세요.');
+      return;
     }
 
-
-    if (error) {
-
-      alert(
-        "❌ 메모 저장 실패: " +
-        error.message
-      );
-
+    const result = await callSessionRegistration({
+      action: 'memo_write', date, memo: newMemo.trim() === '' ? '' : newMemo
+    });
+    if (!result.success) {
+      alert('❌ 메모 저장 실패: ' + result.message);
     } else {
-
       loadData();
-
     }
 
   }
