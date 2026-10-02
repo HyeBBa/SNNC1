@@ -297,6 +297,25 @@
         </h2>
 
         <div style="display: flex; gap: 6px;">
+
+          <button
+            id="androidInstallButton"
+            onclick="installAndroidApp()"
+            class="btn-small"
+            style="background-color: #007bff; display: none;"
+          >
+            📱 Android 앱 설치
+          </button>
+
+          <button
+            id="iphoneInstallButton"
+            onclick="showIphoneInstallGuide()"
+            class="btn-small"
+            style="background-color: #6f42c1;"
+          >
+            🍎 iPhone 설치 방법
+          </button>
+
           <button
             id="notificationButton"
             onclick="enableNotifications()"
@@ -1011,6 +1030,7 @@
 
     // 로그인 후 현재 알림 권한 상태를 버튼에 반영
     updateNotificationButton();
+    updateInstallButtons();
 
   }
 
@@ -1161,6 +1181,22 @@
         (error?.message || error)
       );
     }
+  }
+
+
+  function updateInstallButtons() {
+
+    const androidButton =
+      document.getElementById('androidInstallButton');
+
+    if (!androidButton) return;
+
+    /*
+     * beforeinstallprompt가 발생하기 전에는 Android
+     * 바로 설치 버튼을 숨겨둡니다.
+     */
+    androidButton.style.display =
+      deferredInstallPrompt ? 'inline-block' : 'none';
   }
 
 
