@@ -98,7 +98,8 @@
     }
 
     .day-header-bar {
-      display: flex;
+      display: grid;
+      grid-template-columns: calc(50% + 22.5px) calc(50% - 22.5px);
       background: #f1f3f5;
       border-bottom: 1px solid #ddd;
       font-size: 12px;
@@ -106,24 +107,30 @@
       text-align: center;
     }
 
+    /*
+     * 아래 실제 행 구조는
+     * [조/근무 45px] + [휴무 입력] + [대근 입력]
+     * 이므로 헤더도 동일한 열 비율을 사용합니다.
+     */
     .day-date-part {
-      width: calc(45px + 100% - 45px);
-      flex: 2;
+      width: auto;
       padding: 4px;
       border-right: 1px solid #ddd;
       display: flex;
       align-items: center;
       justify-content: center;
+      box-sizing: border-box;
     }
 
     .day-sub-title {
-      flex: 1;
+      width: auto;
       padding: 4px;
       color: #0056b3;
       background: #e2e8f0;
       display: flex;
       align-items: center;
       justify-content: center;
+      box-sizing: border-box;
     }
 
     .holiday-name {
