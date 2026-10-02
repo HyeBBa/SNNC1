@@ -60,7 +60,7 @@ self.addEventListener('fetch', event => {
 self.addEventListener('push', event => {
 
   let data = {
-    title: 'SNNC 환원반 휴무계획표',
+    title: '휴무계획표',
     body: '새로운 알림이 있습니다.',
     url: './'
   };
