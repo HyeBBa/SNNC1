@@ -113,7 +113,7 @@
      * 이므로 헤더도 동일한 열 비율을 사용합니다.
      */
     .day-date-part {
-      width: auto;
+      width: 100%;
       padding: 4px;
       border-right: 1px solid #ddd;
       display: flex;
@@ -123,7 +123,7 @@
     }
 
     .day-sub-title {
-      width: auto;
+      width: 100%;
       padding: 4px;
       color: #0056b3;
       background: #e2e8f0;
@@ -160,6 +160,7 @@
     .cell-shift {
       width: 45px;
       flex-shrink: 0;
+      box-sizing: border-box;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -168,7 +169,9 @@
     }
 
     .cell-name {
-      flex: 1;
+      flex: 1 1 0;
+      min-width: 0;
+      box-sizing: border-box;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -230,6 +233,12 @@
       font-weight: bold;
       font-size: 12px;
     }
+
+    /* 대근 입력칸 조별 음영 */
+    .cell-name.sub-cell-A { background-color: #eaf4ff; }
+    .cell-name.sub-cell-B { background-color: #eef9ee; }
+    .cell-name.sub-cell-C { background-color: #fff6e8; }
+    .cell-name.sub-cell-D { background-color: #f5efff; }
 
     .s-day {
       color: #1e8449;
@@ -2246,7 +2255,7 @@
           let subName = '';
           let subClick = '';
           let subCellClass =
-            'cell-name';
+            `cell-name sub-cell-${team}`;
 
 
           /*
