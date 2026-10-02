@@ -208,23 +208,6 @@
       align-items: center;
     }
 
-    /* 대근 칸 조별 색상 - 서로 확실히 구분되도록 다른 계열 사용 */
-    .sub-team-a {
-      background-color: #dbeafe !important;
-    }
-
-    .sub-team-b {
-      background-color: #fce1ec !important;
-    }
-
-    .sub-team-c {
-      background-color: #ffedd5 !important;
-    }
-
-    .sub-team-d {
-      background-color: #ede9fe !important;
-    }
-
     .reason-text {
       font-size: 10px;
       color: #888;
@@ -279,6 +262,19 @@
     >
 
     <button onclick="login()">로그인</button>
+
+    <button
+      id="installAppButton"
+      type="button"
+      onclick="installPWA()"
+      style="
+        display: none;
+        margin-top: 8px;
+        background-color: #28a745;
+      "
+    >
+      📱 앱으로 설치하기
+    </button>
 
   </div>
 
@@ -1093,57 +1089,33 @@
       }
 
       const subscriptionJson = subscription.toJSON();
-      const endpoint = subscription.endpoint;
+      const endpoint = subscriptionJson.endpoint;
 
       if (!endpoint) {
-        alert('푸시 구독 정보를 확인하지 못했습니다.');
-        return;
+        throw new Error('Push Subscription endpoint를 확인할 수 없습니다.');
       }
 
-      /*
-       * ==========================================
-       * 기기별 Push Subscription 저장
-       * ==========================================
-       *
-       * 중요:
-       * user_id를 UNIQUE로 사용하지 않습니다.
-       *
-       * 같은 직원이 스마트폰 + PC를 사용하는 경우
-       * 각각 별도의 Push Subscription을 저장해야 합니다.
-       *
-       * 따라서 현재 사용자의 기존 구독 중
-       * 현재 브라우저의 endpoint가 있으면 그 행만 UPDATE,
-       * 없으면 새로운 행을 INSERT합니다.
-       */
-
-      const { data: existingRows, error: findError } =
-        await supabaseClient
-          .from('push_subscriptions')
-          .select('id, user_id, user_name, subscription')
-          .eq('user_id', currentUser.id);
+      // 같은 사용자가 스마트폰과 PC 등 여러 기기에서 사용할 수 있도록
+      // user_id가 아니라 현재 브라우저의 endpoint를 기기 식별자로 사용합니다.
+      const { data: existingRows, error: findError } = await supabaseClient
+        .from('push_subscriptions')
+        .select('id, subscription')
+        .eq('user_id', currentUser.id);
 
       if (findError) {
-        console.error('기존 푸시 구독 조회 실패:', findError);
-        alert(
-          '기존 알림 설정을 확인하지 못했습니다.\n\n' +
-          findError.message
-        );
-        return;
+        throw findError;
       }
 
       const existingRow = (existingRows || []).find(row =>
-        row.subscription &&
-        row.subscription.endpoint === endpoint
+        row.subscription?.endpoint === endpoint
       );
 
       let saveError = null;
 
       if (existingRow) {
-
         const { error } = await supabaseClient
           .from('push_subscriptions')
           .update({
-            user_id: currentUser.id,
             user_name: currentUser.name,
             subscription: subscriptionJson,
             updated_at: new Date().toISOString()
@@ -1151,9 +1123,7 @@
           .eq('id', existingRow.id);
 
         saveError = error;
-
       } else {
-
         const { error } = await supabaseClient
           .from('push_subscriptions')
           .insert({
@@ -1167,10 +1137,10 @@
       }
 
       if (saveError) {
-        console.error('푸시 구독 저장 실패:', saveError);
+        console.error('푸시 구독 저장 실패:', error);
         alert(
           '알림 구독 저장에 실패했습니다.\n\n' +
-          saveError.message
+          error.message
         );
         return;
       }
@@ -1179,7 +1149,7 @@
 
       alert(
         '🔔 알림 설정이 완료되었습니다.\n\n' +
-        '이 기기에서 휴무·대근 관련 알림을 받을 수 있습니다.'
+        '이제 휴무·대근 관련 알림을 받을 수 있습니다.'
       );
 
     } catch (error) {
@@ -1222,18 +1192,15 @@
    * ==========================================
    *
    * 공용 PC에서 A가 알림을 설정한 뒤 로그아웃하고
-   * B가 로그인하는 경우를 고려합니다.
+   * B가 로그인하는 경우, A의 Push Subscription이
+   * 공용 PC에 남아 있으면 A에게 계속 알림이 갈 수 있습니다.
    *
-   * 중요:
-   * user_id 전체를 삭제하지 않습니다.
-   *
-   * 로그아웃하는 현재 브라우저의 Push Subscription
-   * endpoint와 일치하는 행만 삭제합니다.
-   *
-   * 따라서 같은 직원이 스마트폰과 PC에서 각각 알림을
-   * 설정해 둔 경우 PC 로그아웃을 해도 스마트폰 등록은 유지됩니다.
+   * 따라서 로그아웃할 때
+   * 1) 현재 브라우저의 push_subscriptions 행만 삭제하고
+   * 2) 현재 브라우저의 Push Subscription을 해제합니다.
    *
    * ※ 브라우저의 알림 권한 자체는 취소하지 않습니다.
+   *   다음 사용자가 로그인 후 '알림 설정'을 누르면 다시 등록됩니다.
    */
 
   async function logout() {
@@ -1242,67 +1209,39 @@
 
     try {
 
-      let currentEndpoint = null;
-
-      /*
-       * 로그아웃 전에 현재 브라우저의 endpoint를 확보합니다.
-       * unsubscribe를 먼저 하면 endpoint를 확인할 수 없기 때문입니다.
-       */
       if ('serviceWorker' in navigator) {
         try {
           const registration = await navigator.serviceWorker.ready;
           const subscription = await registration.pushManager.getSubscription();
+          const endpoint = subscription?.toJSON?.().endpoint;
 
-          if (subscription) {
-            currentEndpoint = subscription.endpoint;
-          }
-        } catch (pushError) {
-          console.error('현재 브라우저 Push Subscription 확인 실패:', pushError);
-        }
-      }
+          // 현재 브라우저의 endpoint에 해당하는 행만 삭제합니다.
+          // 같은 사용자의 스마트폰/PC 등 다른 기기 구독은 유지됩니다.
+          if (userId && endpoint) {
+            const { data: rows, error: findError } = await supabaseClient
+              .from('push_subscriptions')
+              .select('id, subscription')
+              .eq('user_id', userId);
 
-      if (userId && currentEndpoint) {
-
-        const { data: rows, error: findError } =
-          await supabaseClient
-            .from('push_subscriptions')
-            .select('id, subscription')
-            .eq('user_id', userId);
-
-        if (findError) {
-          console.error('로그아웃 시 푸시 구독 조회 실패:', findError);
-        } else {
-
-          const rowsToDelete = (rows || []).filter(row =>
-            row.subscription &&
-            row.subscription.endpoint === currentEndpoint
-          );
-
-          for (const row of rowsToDelete) {
-            const { error: deleteError } =
-              await supabaseClient
-                .from('push_subscriptions')
-                .delete()
-                .eq('id', row.id);
-
-            if (deleteError) {
-              console.error(
-                '로그아웃 시 현재 기기 푸시 구독 삭제 실패:',
-                deleteError
+            if (findError) {
+              console.error('로그아웃 시 푸시 구독 조회 실패:', findError);
+            } else {
+              const currentRow = (rows || []).find(row =>
+                row.subscription?.endpoint === endpoint
               );
+
+              if (currentRow) {
+                const { error: deleteError } = await supabaseClient
+                  .from('push_subscriptions')
+                  .delete()
+                  .eq('id', currentRow.id);
+
+                if (deleteError) {
+                  console.error('로그아웃 시 현재 기기 푸시 구독 삭제 실패:', deleteError);
+                }
+              }
             }
           }
-        }
-      }
-
-      /*
-       * 현재 브라우저의 Push Subscription을 해제합니다.
-       * 다른 기기의 구독에는 영향을 주지 않습니다.
-       */
-      if ('serviceWorker' in navigator) {
-        try {
-          const registration = await navigator.serviceWorker.ready;
-          const subscription = await registration.pushManager.getSubscription();
 
           if (subscription) {
             await subscription.unsubscribe();
@@ -2228,18 +2167,6 @@
           let subClick = '';
           let subCellClass =
             'cell-name';
-
-          /* 대근 열은 해당 휴무 조별로 색상을 구분합니다. */
-          const subTeamColorClass = {
-            'A': 'sub-team-a',
-            'B': 'sub-team-b',
-            'C': 'sub-team-c',
-            'D': 'sub-team-d'
-          }[team] || '';
-
-          if (subTeamColorClass) {
-            subCellClass += ` ${subTeamColorClass}`;
-          }
 
 
           /*
@@ -3379,6 +3306,126 @@
       }
     );
 
+</script>
+
+<script>
+  /*
+   * ==========================================
+   * PWA 앱 설치
+   * ==========================================
+   */
+
+  let deferredInstallPrompt = null;
+
+  function isStandaloneMode() {
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true
+    );
+  }
+
+  function isIOSDevice() {
+    return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+  }
+
+  function isSafariBrowser() {
+    const ua = window.navigator.userAgent;
+    return (
+      /safari/i.test(ua) &&
+      !/chrome|crios|android|fxios|edgios/i.test(ua)
+    );
+  }
+
+  function updateInstallButton() {
+    const button = document.getElementById('installAppButton');
+    if (!button) return;
+
+    if (isStandaloneMode()) {
+      button.style.display = 'none';
+      return;
+    }
+
+    if (deferredInstallPrompt) {
+      button.style.display = 'block';
+      button.innerText = '📱 앱으로 설치하기';
+      return;
+    }
+
+    if (isIOSDevice()) {
+      button.style.display = 'block';
+      button.innerText = '📱 홈 화면에 추가하기';
+      return;
+    }
+
+    button.style.display = 'block';
+    button.innerText = '📱 앱으로 설치하기';
+  }
+
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    updateInstallButton();
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    updateInstallButton();
+  });
+
+  async function installPWA() {
+    const button = document.getElementById('installAppButton');
+
+    if (isStandaloneMode()) return;
+
+    if (deferredInstallPrompt) {
+      const promptEvent = deferredInstallPrompt;
+      deferredInstallPrompt = null;
+
+      if (button) {
+        button.disabled = true;
+        button.innerText = '설치 창을 확인해 주세요';
+      }
+
+      try {
+        await promptEvent.prompt();
+        const choice = await promptEvent.userChoice;
+
+        if (choice.outcome === 'accepted') {
+          if (button) button.style.display = 'none';
+        } else {
+          updateInstallButton();
+        }
+      } catch (error) {
+        console.warn('PWA 설치 실행 실패:', error);
+        updateInstallButton();
+      } finally {
+        if (button) button.disabled = false;
+      }
+      return;
+    }
+
+    if (isIOSDevice()) {
+      alert(
+        '📱 아이폰/아이패드에서 앱으로 추가하는 방법\n\n' +
+        '1. Safari에서 이 사이트를 열어주세요.\n' +
+        '2. 화면의 공유 버튼(□↑)을 누르세요.\n' +
+        '3. "홈 화면에 추가"를 선택하세요.\n' +
+        '4. "추가"를 누르면 앱 아이콘이 홈 화면에 만들어집니다.'
+      );
+      return;
+    }
+
+    const browserHint =
+      isSafariBrowser()
+        ? 'Safari에서는 브라우저의 공유 메뉴에서 "홈 화면에 추가"를 이용해 주세요.'
+        : '현재 브라우저에서는 설치 메뉴가 별도로 제공될 수 있습니다. 브라우저 메뉴에서 "앱 설치" 또는 "홈 화면에 추가"를 찾아주세요.';
+
+    alert('📱 앱 설치 안내\n\n' + browserHint);
+  }
+
+  window.addEventListener('load', () => {
+    updateInstallButton();
+  });
 </script>
 
 <script>
