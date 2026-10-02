@@ -2837,17 +2837,11 @@
         error: userError
       } =
         await supabaseClient
-          .from('app_users')
-          .select(
-            'name, team, role, is_active'
-          )
-          .eq(
-            'name',
-            subName
-          )
-          .eq(
-            'is_active',
-            true
+          .rpc(
+            'find_active_user_by_name',
+            {
+              p_name: subName
+            }
           );
 
 
@@ -3717,7 +3711,6 @@
     updateInAppBrowserNotice();
     updateInstallButtons();
   });
-</script>
 </script>
 
 <script>
