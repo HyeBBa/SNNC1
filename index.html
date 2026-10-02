@@ -1174,19 +1174,17 @@
       }
 
       // 구독 정보는 테이블을 직접 조회/수정하지 않고
-      // 서버 측 RPC를 통해 현재 기기의 endpoint 기준으로 저장합니다.
-      const { error: saveError } = await supabaseClient
-        .rpc('upsert_push_subscription', {
-          p_user_id: currentUser.id,
-          p_user_name: currentUser.name,
-          p_subscription: subscriptionJson
-        });
+      // 서버가 세션 사용자를 확인한 뒤 현재 기기의 endpoint 기준으로 저장합니다.
+      const { data: saveResult, error: saveError } = await supabaseClient.functions.invoke('app-session', {
+        body: { action: 'push_upsert', subscription: subscriptionJson },
+        headers: { 'x-app-session': currentSessionToken }
+      });
 
-      if (saveError) {
+      if (saveError || !saveResult?.success) {
         console.error('푸시 구독 저장 실패:', saveError);
         alert(
           '알림 구독 저장에 실패했습니다.\n\n' +
-          saveError.message
+          (saveResult?.message || saveError?.message || '세션이 만료되었을 수 있습니다. 다시 로그인한 뒤 알림을 설정해 주세요.')
         );
         return;
       }
@@ -1277,17 +1275,17 @@
           const subscription = await registration.pushManager.getSubscription();
           const endpoint = subscription?.toJSON?.().endpoint;
 
-          // 현재 브라우저의 endpoint에 해당하는 행만 서버 측 RPC로 삭제합니다.
+          // 서버가 세션 사용자를 확인한 뒤 현재 브라우저의 endpoint만 삭제합니다.
           // 같은 사용자의 스마트폰/PC 등 다른 기기 구독은 유지됩니다.
           if (userId && endpoint) {
-            const { error: deleteError } = await supabaseClient
-              .rpc('delete_push_subscription', {
-                p_user_id: userId,
-                p_endpoint: endpoint
-              });
+            const { data: deleteResult, error: deleteError } = await supabaseClient.functions.invoke('app-session', {
+              body: { action: 'push_delete', endpoint },
+              headers: { 'x-app-session': currentSessionToken }
+            });
 
-            if (deleteError) {
+            if (deleteError || !deleteResult?.success) {
               console.error('로그아웃 시 현재 기기 푸시 구독 삭제 실패:', deleteError);
+              alert('현재 기기 구독의 서버 삭제를 확인하지 못했습니다. 다시 로그인해 알림을 등록한 뒤 로그아웃해 주세요.');
             }
           }
 
