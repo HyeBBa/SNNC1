@@ -1,4 +1,4 @@
-const CACHE_NAME = 'snnc-pwa-v4';
+const CACHE_NAME = 'snnc-pwa-v5';
 
 const FILES_TO_CACHE = [
   './',
@@ -15,12 +15,20 @@ const FILES_TO_CACHE = [
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(FILES_TO_CACHE))
+      .then(cache => cache.addAll(
+        FILES_TO_CACHE.map(url => new Request(url, { cache: 'reload' }))
+      ))
   );
 
-  self.skipWaiting();
+  // 새 버전은 사용자가 업데이트 적용을 누를 때 활성화합니다.
 });
 
+
+self.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    event.waitUntil(self.skipWaiting());
+  }
+});
 
 /* =========================
    PWA 활성화
@@ -34,10 +42,8 @@ self.addEventListener('activate', event => {
           .filter(key => key !== CACHE_NAME)
           .map(key => caches.delete(key))
       )
-    )
+    ).then(() => self.clients.claim())
   );
-
-  self.clients.claim();
 });
 
 
