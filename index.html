@@ -2534,10 +2534,24 @@
     }
   }
 
-  document.addEventListener('visibilitychange', async () => {
-    if (document.visibilityState === 'visible' && currentUser && currentSessionToken) {
-      await callSessionRegistration({ action: 'verify' });
+  let calendarResumeToken = '';
+
+  async function refreshCalendarOnResume() {
+    const token = currentSessionToken;
+    if (document.visibilityState !== 'visible' || !currentUser || !token || calendarResumeToken === token) return;
+    calendarResumeToken = token;
+    try {
+      const result = await callSessionRegistration({ action: 'verify' });
+      if (!result.success || result.sessionExpired || token !== currentSessionToken || !currentUser || document.visibilityState !== 'visible') return;
+      await loadData();
+    } finally {
+      if (calendarResumeToken === token) calendarResumeToken = '';
     }
+  }
+
+  document.addEventListener('visibilitychange', refreshCalendarOnResume);
+  window.addEventListener('pageshow', event => {
+    if (event.persisted) refreshCalendarOnResume();
   });
 
   async function callSessionRegistration(body, functionName = 'app-session') {
