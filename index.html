@@ -2510,7 +2510,7 @@
       const { data, error } = await supabaseClient.functions.invoke('app-session', {
         body, headers: { 'x-app-session': currentSessionToken }
       });
-      if (!error && data?.success) return { success: true };
+      if (!error && data?.success) return { success: true, ...(body.action === 'helper_lookup' ? { users: data.users || [] } : {}) };
       let message = data?.message || '세션 또는 입력 정보를 확인해 주세요. 필요하면 다시 로그인해 주세요.';
       if (error?.context && typeof error.context.clone === 'function') {
         try { message = (await error.context.clone().json()).message || message; } catch {}
@@ -2755,30 +2755,16 @@
         subName.trim();
 
 
-      const {
-        data: userRows,
-        error: userError
-      } =
-        await supabaseClient
-          .rpc(
-            'find_active_user_by_name',
-            {
-              p_name: subName
-            }
-          );
+      const lookup = await callSessionRegistration({
+        action: 'helper_lookup', name: subName
+      });
 
-
-      if (userError) {
-
-        alert(
-          "사용자 조회 실패: " +
-          userError.message
-        );
-
+      if (!lookup.success) {
+        alert("사용자 조회 실패: " + lookup.message);
         return;
-
       }
 
+      const userRows = lookup.users;
 
       if (
         !userRows ||
