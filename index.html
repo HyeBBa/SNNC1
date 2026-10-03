@@ -1306,11 +1306,11 @@
       currentSessionToken = '';
       if (sessionToken) {
         try {
-          const { error: sessionError } = await supabaseClient.functions.invoke('app-session', {
+          const { data: logoutResult, error: sessionError } = await supabaseClient.functions.invoke('app-session', {
             body: { action: 'logout' },
             headers: { 'x-app-session': sessionToken }
           });
-          if (sessionError) {
+          if (sessionError || !logoutResult?.success) {
             alert('이 기기에서는 로그아웃했습니다. 서버 세션 종료는 확인하지 못했습니다.');
           }
         } catch {
@@ -1427,6 +1427,7 @@
         .invoke(
           'change-login-code',
           {
+            headers: { 'x-app-session': currentSessionToken },
             body: {
               currentCode:
                 currentLoginCode,
@@ -1440,9 +1441,11 @@
 
     if (error) {
 
-      alert(
-        "코드 변경에 실패했습니다. 잠시 후 다시 시도해 주세요."
-      );
+      let message = data?.message || '코드 변경에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+      if (error?.context && typeof error.context.clone === 'function') {
+        try { message = (await error.context.clone().json()).message || message; } catch {}
+      }
+      alert(message);
 
       return;
 
