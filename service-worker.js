@@ -1,4 +1,4 @@
-const CACHE_NAME = 'snnc-pwa-v3';
+const CACHE_NAME = 'snnc-pwa-v4';
 
 const FILES_TO_CACHE = [
   './',
@@ -109,7 +109,12 @@ self.addEventListener('push', event => {
       url: data.url || './'
     },
 
-    // 공통 tag를 지정하지 않아 새 알림이 이전 알림을 덮어쓰지 않습니다.
+    // 수신마다 고유한 tag를 사용해 이전 알림과 분리합니다.
+    tag: 'snnc-' + (
+      typeof self.crypto?.randomUUID === 'function'
+        ? self.crypto.randomUUID()
+        : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2)
+    ),
     vibrate: [200, 100, 200]
   };
 
