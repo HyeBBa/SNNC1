@@ -109,11 +109,8 @@ self.addEventListener('push', event => {
       url: data.url || './'
     },
 
-    vibrate: [200, 100, 200],
-
-    tag: data.tag || 'snnc-notification',
-
-    renotify: true
+    // 공통 tag를 지정하지 않아 새 알림이 이전 알림을 덮어쓰지 않습니다.
+    vibrate: [200, 100, 200]
   };
 
   event.waitUntil(
