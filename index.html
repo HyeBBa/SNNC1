@@ -628,6 +628,7 @@
   let currentLoginCode = '';
   // 서버 세션 토큰은 현재 창의 메모리에만 보관합니다.
   let currentSessionToken = '';
+  let sessionExpiryTimer = null;
 
   let currentYear =
     new Date().getFullYear();
@@ -1048,6 +1049,7 @@
 
     currentLoginCode = code;
     currentSessionToken = sessionData.token;
+    scheduleSessionExpiry(sessionData.expires_at);
 
 
     document
@@ -1177,17 +1179,12 @@
 
       // 구독 정보는 테이블을 직접 조회/수정하지 않고
       // 서버가 세션 사용자를 확인한 뒤 현재 기기의 endpoint 기준으로 저장합니다.
-      const { data: saveResult, error: saveError } = await supabaseClient.functions.invoke('app-session', {
-        body: { action: 'push_upsert', subscription: subscriptionJson },
-        headers: { 'x-app-session': currentSessionToken }
+      const saveResult = await callSessionRegistration({
+        action: 'push_upsert', subscription: subscriptionJson
       });
-
-      if (saveError || !saveResult?.success) {
-        console.error('푸시 구독 저장 실패:', saveError);
-        alert(
-          '알림 구독 저장에 실패했습니다.\n\n' +
-          (saveResult?.message || saveError?.message || '세션이 만료되었을 수 있습니다. 다시 로그인한 뒤 알림을 설정해 주세요.')
-        );
+      if (saveResult.sessionExpired) return;
+      if (!saveResult.success) {
+        alert('알림 구독 저장에 실패했습니다.\n\n' + saveResult.message);
         return;
       }
 
@@ -1318,6 +1315,8 @@
         }
       }
 
+      clearTimeout(sessionExpiryTimer);
+      sessionExpiryTimer = null;
       currentUser = null;
       currentLoginCode = '';
       ++calendarLoadVersion;
@@ -1418,51 +1417,14 @@
     }
 
 
-    const {
-      data,
-      error
-    } =
-      await supabaseClient
-        .functions
-        .invoke(
-          'change-login-code',
-          {
-            headers: { 'x-app-session': currentSessionToken },
-            body: {
-              currentCode:
-                currentLoginCode,
-
-              newCode:
-                trimmedNewCode
-            }
-          }
-        );
-
-
-    if (error) {
-
-      let message = data?.message || '코드 변경에 실패했습니다. 잠시 후 다시 시도해 주세요.';
-      if (error?.context && typeof error.context.clone === 'function') {
-        try { message = (await error.context.clone().json()).message || message; } catch {}
-      }
-      alert(message);
-
+    const result = await callSessionRegistration({
+      currentCode: currentLoginCode, newCode: trimmedNewCode
+    }, 'change-login-code');
+    if (result.sessionExpired) return;
+    if (!result.success) {
+      alert(result.message);
       return;
-
     }
-
-
-    if (!data || !data.success) {
-
-      alert(
-        data?.message ||
-        "코드 변경에 실패했습니다."
-      );
-
-      return;
-
-    }
-
 
     alert(
       "접속 코드가 변경되었습니다.\n" +
@@ -1596,6 +1558,7 @@
     const result = await callSessionRegistration({ action: 'calendar_read' });
     if (loadVersion !== calendarLoadVersion || sessionToken !== currentSessionToken || !currentUser) return;
 
+    if (result.sessionExpired) return;
     if (!result.success) {
       requestsData = [];
       memosData = [];
@@ -2485,13 +2448,58 @@
       : request.requested_by;
   }
 
-  async function callSessionRegistration(body) {
+  function clearSessionScreen() {
+    clearTimeout(sessionExpiryTimer);
+    sessionExpiryTimer = null;
+    currentSessionToken = '';
+    currentUser = null;
+    currentLoginCode = '';
+    ++calendarLoadVersion;
+    requestsData = [];
+    memosData = [];
+    document.getElementById('calendarGrid').innerHTML = '';
+    document.getElementById('welcomeMsg').innerText = '';
+    document.getElementById('loginCode').value = '';
+    document.getElementById('mainScreen').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'block';
+    updateNotificationButton();
+  }
+
+  function expireSession(expectedToken) {
+    if (!expectedToken || expectedToken !== currentSessionToken) return;
+    clearSessionScreen();
+    alert('로그인 시간이 만료되었거나 세션이 종료되었습니다. 다시 로그인해 주세요.');
+  }
+
+  function scheduleSessionExpiry(expiresAt) {
+    clearTimeout(sessionExpiryTimer);
+    const delay = Date.parse(expiresAt) - Date.now();
+    const token = currentSessionToken;
+    if (Number.isFinite(delay)) {
+      sessionExpiryTimer = setTimeout(() => expireSession(token), Math.max(0, delay));
+    }
+  }
+
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && currentUser && currentSessionToken) {
+      await callSessionRegistration({ action: 'verify' });
+    }
+  });
+
+  async function callSessionRegistration(body, functionName = 'app-session') {
+    const token = currentSessionToken;
+    if (!currentUser || !token) return { success: false, sessionExpired: true };
     try {
-      const { data, error } = await supabaseClient.functions.invoke('app-session', {
-        body, headers: { 'x-app-session': currentSessionToken }
+      const { data, error } = await supabaseClient.functions.invoke(functionName, {
+        body, headers: { 'x-app-session': token }
       });
+      if (token !== currentSessionToken) return { success: false, sessionExpired: true };
       if (!error && data?.success) return { success: true, ...(body.action === 'helper_lookup' ? { users: data.users || [] } : {}), ...(body.action === 'calendar_read' ? { requests: data.requests || [], memos: data.memos || [] } : {}) };
-      let message = data?.message || '세션 또는 입력 정보를 확인해 주세요. 필요하면 다시 로그인해 주세요.';
+      let message = data?.message || '잠시 후 다시 시도해 주세요.';
+      if (error?.context?.status === 401) {
+        expireSession(token);
+        return { success: false, sessionExpired: true };
+      }
       if (error?.context && typeof error.context.clone === 'function') {
         try { message = (await error.context.clone().json()).message || message; } catch {}
       }
@@ -2571,6 +2579,7 @@
     const result = await callSessionRegistration({
       action: 'request_create', team: requestTeam, date, reason
     });
+    if (result.sessionExpired) return;
     if (!result.success) {
       alert('❌ 신청 저장 실패: ' + result.message);
     } else {
@@ -2627,6 +2636,7 @@
     const result = await callSessionRegistration({
       action: 'memo_write', date, memo: newMemo.trim() === '' ? '' : newMemo
     });
+    if (result.sessionExpired) return;
     if (!result.success) {
       alert('❌ 메모 저장 실패: ' + result.message);
     } else {
@@ -2739,6 +2749,7 @@
         action: 'helper_lookup', name: subName
       });
 
+      if (lookup.sessionExpired) return;
       if (!lookup.success) {
         alert("사용자 조회 실패: " + lookup.message);
         return;
@@ -2925,6 +2936,7 @@
       const result = await callSessionRegistration({
         action: 'vacancy_create', team: tTeam, date: tDate, filled_by: subName
       });
+      if (result.sessionExpired) return;
       error = result.success ? null : { message: result.message };
 
 
@@ -2937,6 +2949,7 @@
       const result = await callSessionRegistration({
         action: 'sub_register', request_id: id, filled_by: subName
       });
+      if (result.sessionExpired) return;
       error = result.success ? null : { message: result.message };
 
 
@@ -3057,6 +3070,7 @@
     const result = await callSessionRegistration({
       action: 'sub_cancel', request_id: id
     });
+    if (result.sessionExpired) return;
     if (!result.success) {
       alert('❌ 대근 취소 실패: ' + result.message);
     } else {
@@ -3165,6 +3179,7 @@
     });
 
 
+    if (result.sessionExpired) return;
     if (!result.success) {
 
       alert(
