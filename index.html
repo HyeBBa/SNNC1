@@ -1320,6 +1320,10 @@
 
       currentUser = null;
       currentLoginCode = '';
+      ++calendarLoadVersion;
+      requestsData = [];
+      memosData = [];
+      document.getElementById('calendarGrid').innerHTML = '';
 
       document
         .getElementById('loginCode')
@@ -1576,57 +1580,30 @@
    * ==========================================
    */
 
+  let calendarLoadVersion = 0;
+
   async function loadData() {
+    const loadVersion = ++calendarLoadVersion;
+    const sessionToken = currentSessionToken;
+    if (!currentUser || !sessionToken) return;
 
-    await loadHolidaysForYear(
-      currentYear
-    );
+    await loadHolidaysForYear(currentYear);
+    if (loadVersion !== calendarLoadVersion || sessionToken !== currentSessionToken) return;
 
-    const [
-      reqRes,
-      memoRes
-    ] =
-      await Promise.all([
+    const result = await callSessionRegistration({ action: 'calendar_read' });
+    if (loadVersion !== calendarLoadVersion || sessionToken !== currentSessionToken || !currentUser) return;
 
-        supabaseClient
-          .from('requests')
-          .select('*'),
-
-        supabaseClient
-          .from('daily_memos')
-          .select('*')
-
-      ]);
-
-
-    if (
-      reqRes.error ||
-      memoRes.error
-    ) {
-
-      alert(
-        "데이터를 불러오지 못했습니다: " +
-        (
-          reqRes.error?.message ||
-          memoRes.error?.message
-        )
-      );
-
+    if (!result.success) {
+      requestsData = [];
+      memosData = [];
+      renderCalendar();
+      alert('데이터를 불러오지 못했습니다: ' + result.message);
       return;
-
     }
 
-
-    requestsData =
-      reqRes.data || [];
-
-
-    memosData =
-      memoRes.data || [];
-
-
+    requestsData = result.requests;
+    memosData = result.memos;
     renderCalendar();
-
   }
 
 
@@ -2510,7 +2487,7 @@
       const { data, error } = await supabaseClient.functions.invoke('app-session', {
         body, headers: { 'x-app-session': currentSessionToken }
       });
-      if (!error && data?.success) return { success: true, ...(body.action === 'helper_lookup' ? { users: data.users || [] } : {}) };
+      if (!error && data?.success) return { success: true, ...(body.action === 'helper_lookup' ? { users: data.users || [] } : {}), ...(body.action === 'calendar_read' ? { requests: data.requests || [], memos: data.memos || [] } : {}) };
       let message = data?.message || '세션 또는 입력 정보를 확인해 주세요. 필요하면 다시 로그인해 주세요.';
       if (error?.context && typeof error.context.clone === 'function') {
         try { message = (await error.context.clone().json()).message || message; } catch {}
