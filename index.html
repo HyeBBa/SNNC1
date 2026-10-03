@@ -262,6 +262,13 @@
 
 <body>
 
+  <div id="appUpdateNotice" role="status" hidden style="background:#e6f2ff;border:1px solid #b8d9ff;border-radius:8px;padding:12px;margin-bottom:10px;text-align:center;">
+    <strong>새 버전이 있습니다.</strong>
+    <p style="margin:6px 0;font-size:13px;">저장하지 않은 입력은 사라질 수 있으며, 적용 후 다시 로그인해야 합니다.</p>
+    <button id="applyAppUpdateButton" type="button" onclick="applyAppUpdate()" style="width:auto;padding:8px 18px;">업데이트 적용</button>
+  </div>
+
+
   <div id="inAppBrowserNotice" style="
     display: none;
     background: #fff3cd;
@@ -3545,28 +3552,69 @@
 </script>
 
 <script>
-  // PWA 서비스 워커 등록
+  // 앱을 열거나 돌아올 때 새 버전을 확인하고, 사용자 선택 후 적용합니다.
+  let appUpdateRegistration = null;
+  let applyingAppUpdate = false;
+  let appReloadStarted = false;
+  let lastAppUpdateCheck = 0;
+
+  function showAppUpdateNotice() {
+    if (appUpdateRegistration?.waiting) {
+      document.getElementById('appUpdateNotice').hidden = false;
+    }
+  }
+
+  async function checkAppUpdate() {
+    if (!appUpdateRegistration || document.visibilityState === 'hidden') return;
+    if (Date.now() - lastAppUpdateCheck < 30000) return;
+    lastAppUpdateCheck = Date.now();
+    try {
+      await appUpdateRegistration.update();
+      showAppUpdateNotice();
+    } catch (error) {
+      console.warn('앱 업데이트 확인 실패:', error);
+    }
+  }
+
+  function applyAppUpdate() {
+    const waitingWorker = appUpdateRegistration?.waiting;
+    if (!waitingWorker || applyingAppUpdate) return;
+    applyingAppUpdate = true;
+    const button = document.getElementById('applyAppUpdateButton');
+    button.disabled = true;
+    button.innerText = '업데이트 적용 중…';
+    waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+  }
+
   if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (applyingAppUpdate && !appReloadStarted) {
+        appReloadStarted = true;
+        window.location.reload();
+      }
+    });
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./service-worker.js?v=20261003-2', {
+      navigator.serviceWorker.register('./service-worker.js', {
         updateViaCache: 'none'
-      })
-        .then(registration => {
-          registration.update().catch(error =>
-            console.warn('알림 처리 코드 갱신 실패:', error)
-          );
-          document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') {
-              registration.update().catch(error =>
-                console.warn('알림 처리 코드 갱신 실패:', error)
-              );
+      }).then(registration => {
+        appUpdateRegistration = registration;
+        showAppUpdateNotice();
+        registration.addEventListener('updatefound', () => {
+          const worker = registration.installing;
+          if (!worker) return;
+          worker.addEventListener('statechange', () => {
+            if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+              showAppUpdateNotice();
             }
           });
-          console.log('PWA 서비스 워커 등록 완료');
-          updateInAppBrowserNotice();
-          updateInstallButtons();
-        })
-        .catch(error => console.warn('PWA 서비스 워커 등록 실패:', error));
+        });
+        checkAppUpdate();
+        document.addEventListener('visibilitychange', checkAppUpdate);
+        window.addEventListener('pageshow', checkAppUpdate);
+        setInterval(checkAppUpdate, 60000);
+        updateInAppBrowserNotice();
+        updateInstallButtons();
+      }).catch(error => console.warn('PWA 서비스 워커 등록 실패:', error));
     });
   }
 </script>
