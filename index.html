@@ -1600,15 +1600,23 @@
 
   let calendarLoadVersion = 0;
 
+  function calendarMonthRange(year, month) {
+    return {
+      start_date: new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10),
+      end_date: new Date(Date.UTC(year, month + 1, 1)).toISOString().slice(0, 10)
+    };
+  }
+
   async function loadData() {
     const loadVersion = ++calendarLoadVersion;
+    const range = calendarMonthRange(currentYear, currentMonth);
     const sessionToken = currentSessionToken;
     if (!currentUser || !sessionToken) return;
 
     await loadHolidaysForYear(currentYear);
     if (loadVersion !== calendarLoadVersion || sessionToken !== currentSessionToken) return;
 
-    const result = await callSessionRegistration({ action: 'calendar_read' });
+    const result = await callSessionRegistration({ action: 'calendar_read', ...range });
     if (loadVersion !== calendarLoadVersion || sessionToken !== currentSessionToken || !currentUser) return;
 
     if (result.sessionExpired) return;
