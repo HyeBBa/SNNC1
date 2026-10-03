@@ -294,7 +294,7 @@
        style="max-width: 400px; margin: 50px auto; text-align: center;">
 
     <h2>🔒 교대근무 로그인</h2>
-    <p style="margin:0 0 12px;font-size:12px;color:#6c757d;">버전 2026.10.03.1 · 업데이트 확인</p>
+    <p style="margin:0 0 12px;font-size:12px;color:#6c757d;">버전 2026.10.03.2</p>
 
     <input
       type="password"
@@ -1098,7 +1098,7 @@
 
     loadData();
 
-    // 로그인 후 현재 알림 권한 상태를 버튼에 반영
+    // 로그인 후 현재 기기의 서버 알림 구독 등록 여부를 버튼에 반영
     updateNotificationButton();
     updateInstallButtons();
 
@@ -1231,26 +1231,56 @@
   }
 
 
-  function updateNotificationButton() {
+  let notificationStatusCheckVersion = 0;
 
+  async function updateNotificationButton() {
+    const version = ++notificationStatusCheckVersion;
     const button = document.getElementById('notificationButton');
-
     if (!button) return;
-
-    if (!('Notification' in window)) {
+    button.disabled = false;
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
       button.innerText = '🔔 알림 미지원';
       button.disabled = true;
       return;
     }
-
-    if (Notification.permission === 'granted') {
-      button.innerText = '🔔 알림 허용됨';
+    button.innerText = '🔔 알림 설정';
+    button.style.backgroundColor = '#28a745';
+    if (!currentUser || !currentSessionToken || Notification.permission !== 'granted') return;
+    const token = currentSessionToken;
+    const userId = currentUser.id;
+    button.innerText = '🔔 등록 확인 중';
+    try {
+      const registration = await navigator.serviceWorker.getRegistration();
+      const subscription = registration
+        ? await registration.pushManager.getSubscription() : null;
+      if (version !== notificationStatusCheckVersion || token !== currentSessionToken || userId !== currentUser?.id) return;
+      const endpoint = subscription?.endpoint || subscription?.toJSON?.().endpoint;
+      if (!endpoint) {
+        button.innerText = '🔔 알림 설정';
+        return;
+      }
+      const result = await callSessionRegistration({ action: 'push_status', endpoint });
+      if (version !== notificationStatusCheckVersion || token !== currentSessionToken || userId !== currentUser?.id) return;
+      if (!result.success) {
+        button.innerText = '🔔 등록 확인 불가';
+        button.style.backgroundColor = '#6c757d';
+        return;
+      }
+      button.innerText = result.registered ? '🔔 알림 등록됨' : '🔔 알림 설정';
+      button.style.backgroundColor = result.registered ? '#6c757d' : '#28a745';
+    } catch {
+      if (version !== notificationStatusCheckVersion || token !== currentSessionToken) return;
+      button.innerText = '🔔 등록 확인 불가';
       button.style.backgroundColor = '#6c757d';
-    } else {
-      button.innerText = '🔔 알림 설정';
-      button.style.backgroundColor = '#28a745';
     }
   }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && currentUser) updateNotificationButton();
+  });
+  setInterval(() => {
+    if (document.visibilityState === 'visible' && currentUser) updateNotificationButton();
+  }, 30000);
 
 
   /*
@@ -2503,7 +2533,7 @@
         body, headers: { 'x-app-session': token }
       });
       if (token !== currentSessionToken) return { success: false, sessionExpired: true };
-      if (!error && data?.success) return { success: true, ...(body.action === 'helper_lookup' ? { users: data.users || [] } : {}), ...(body.action === 'calendar_read' ? { requests: data.requests || [], memos: data.memos || [] } : {}) };
+      if (!error && data?.success) return { success: true, ...(body.action === 'push_status' ? { registered: data.registered === true } : {}), ...(body.action === 'helper_lookup' ? { users: data.users || [] } : {}), ...(body.action === 'calendar_read' ? { requests: data.requests || [], memos: data.memos || [] } : {}) };
       let message = data?.message || '잠시 후 다시 시도해 주세요.';
       if (error?.context?.status === 401) {
         expireSession(token);
