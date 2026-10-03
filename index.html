@@ -294,7 +294,7 @@
        style="max-width: 400px; margin: 50px auto; text-align: center;">
 
     <h2>🔒 교대근무 로그인</h2>
-    <p style="margin:0 0 12px;font-size:12px;color:#6c757d;">버전 2026.10.03.3</p>
+    <p style="margin:0 0 12px;font-size:12px;color:#6c757d;">버전 2026.10.03.4</p>
     <p style="margin:0 0 12px;font-size:12px;color:#6c757d;">제작 · 장경준</p>
 
     <input
@@ -1400,8 +1400,20 @@
     }
 
 
+    const quota = await callSessionRegistration({ action: 'code_change_status' });
+    if (quota.sessionExpired) return;
+    if (!quota.success || !Number.isInteger(quota.remaining)) {
+      alert('남은 변경 횟수를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+      return;
+    }
+    if (quota.remaining <= 0) {
+      alert('이번 달 남은 변경 횟수: 0회 / 2회\n\n이번 달 변경 기회를 모두 사용했습니다. 다음 달에 다시 변경할 수 있습니다.');
+      return;
+    }
+
     const newCode =
       prompt(
+        '이번 달 남은 변경 횟수: ' + quota.remaining + '회 / ' + quota.limit + '회\n\n' +
         "새 접속 코드를 입력하세요.\n" +
         "(6~50자, 현재 코드와 다른 값)\n\n" +
         "※ 접속 코드는 월 2회까지만 변경할 수 있습니다."
@@ -2534,7 +2546,7 @@
         body, headers: { 'x-app-session': token }
       });
       if (token !== currentSessionToken) return { success: false, sessionExpired: true };
-      if (!error && data?.success) return { success: true, ...(body.action === 'push_status' ? { registered: data.registered === true } : {}), ...(body.action === 'helper_lookup' ? { users: data.users || [] } : {}), ...(body.action === 'calendar_read' ? { requests: data.requests || [], memos: data.memos || [] } : {}) };
+      if (!error && data?.success) return { success: true, ...(body.action === 'code_change_status' ? { remaining: data.remaining, limit: data.limit, used: data.used, month: data.month } : {}), ...(body.action === 'push_status' ? { registered: data.registered === true } : {}), ...(body.action === 'helper_lookup' ? { users: data.users || [] } : {}), ...(body.action === 'calendar_read' ? { requests: data.requests || [], memos: data.memos || [] } : {}) };
       let message = data?.message || '잠시 후 다시 시도해 주세요.';
       if (error?.context?.status === 401) {
         expireSession(token);
